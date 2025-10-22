@@ -149,14 +149,13 @@ def estimate_angle(img):
     return angle
 
 # ---------------------------------------------------------------------------------------------------执行滑动
-def dynamic_adjust_drag(driver, slider_elem, track_sel, canvas_sel, max_steps=20, tolerance=2):
+def dynamic_adjust_drag(driver, slider_elem, track_sel, canvas_sel, max_steps=20, tolerance=3):
     actions = ActionChains(driver)
     actions.click_and_hold(slider_elem).perform()
     moved = 0
     track_w = driver.execute_script("var el=document.querySelector(arguments[0]); if(!el) return 0; return el.getBoundingClientRect().width;",track_sel)
     max_possible_x = int(track_w) if track_w else 300  # 轨道最大宽度
     correct_direction = 1  # 1:向右为正确方向；-1:向左为正确方向（默认向右）
-    last_angle = None  # 首次滑动前的角度
 
     for step in range(max_steps):
         # 计算当前角度
@@ -172,7 +171,7 @@ def dynamic_adjust_drag(driver, slider_elem, track_sel, canvas_sel, max_steps=20
             print(f"角度已达标（{current_angle:.1f}°），停止拖动")
             break
         else:
-            print(f"角度未达标（{current_angle:.1f}°），继续拖动")
+            print(f"角度未达标（{current_angle:.1f}°），进行拖动")
 
         if current_angle is not None:
             abs_angle = abs(current_angle)
@@ -183,8 +182,10 @@ def dynamic_adjust_drag(driver, slider_elem, track_sel, canvas_sel, max_steps=20
                 step_base = random.randint(5, 10)
             elif abs_angle > 10:
                 step_base = random.randint(2, 5)
-            else:
+            elif abs_angle > 5:
                 step_base = random.randint(1, 2)
+            else:
+                step_base = 1
             # 步长方向：基于首次滑动判断的正确方向
             step_dx = correct_direction * step_base
         else:
@@ -199,18 +200,21 @@ def dynamic_adjust_drag(driver, slider_elem, track_sel, canvas_sel, max_steps=20
         actions.move_by_offset(step_dx, random.uniform(-2, 2)).perform()
         moved += step_dx
 
-        # 滑动后判断正确方向（基于角度变化）（仅为低角度时判断）
-        if last_angle is not None and current_angle is not None and abs(current_angle) < 10:
+        img = get_image(driver, canvas_sel)
+        new_angle = estimate_angle(img)
+        # 判断方向（基于角度变化）（仅为低角度时判断）
+        if new_angle is not None and current_angle is not None and abs(new_angle) < 10:
+            print("进入低角度检测")
             # 计算首次滑动后的角度变化（绝对值）
-            angle_change = abs(current_angle) - abs(last_angle)
-            if angle_change > 0:
+            angle_change = abs(current_angle) - abs(new_angle)
+            if angle_change < 0:
                 # 向右滑动后角度变大→正确方向为向左（-1）
                 correct_direction = -1
-                print(f"滑动后角度增大（{abs(last_angle):.1f}°→{abs(current_angle):.1f}°），正确方向为向左")
+                print(f"滑动后角度增大（{abs(current_angle):.1f}°→{abs(new_angle):.1f}°），正确方向为向左")
             else:
                 # 向右滑动后角度变小→正确方向为向右（1）
                 correct_direction = 1
-                print(f"滑动后角度减小（{abs(last_angle):.1f}°→{abs(current_angle):.1f}°），正确方向为向右")
+                print(f"滑动后角度减小（{abs(current_angle):.1f}°→{abs(new_angle):.1f}°），正确方向为向右")
 
         # 动态调整延迟（角度小则延迟长）
         if current_angle is not None:
@@ -256,7 +260,7 @@ def captcha(driver, selectors, max_attempts=3):
             track_sel,
             canvas_sel,
             max_steps=50,
-            tolerance=1
+            tolerance=3
         )
         print(f"实际拖动距离：{actual_x}px")
 

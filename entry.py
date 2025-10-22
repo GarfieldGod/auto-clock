@@ -7,7 +7,7 @@ from test.test import Test, TestConfig
 
 DRIVER_PATH = "C:/Application/Edge_Driver/msedgedriver.exe"
 if __name__ == '__main__':
-    isTest = True
+    isTest = False
 
     if not isTest:
         remote_config = Config(
@@ -19,7 +19,7 @@ if __name__ == '__main__':
         )
         remote_clock = AutoClock(remote_config)
         remote_clock.run()
-        time.sleep(3600)
+        time.sleep(5)
     else:
         test_config = TestConfig(
             DRIVER_PATH,

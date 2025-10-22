@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from src.login import login
 from src.captcha import captcha, Selectors
+from src.clock import clock
 
 @dataclass
 class Config:
@@ -82,17 +83,39 @@ class AutoClock:
                 print(f"识别验证码成功。")
                 return True
             else:
-                throw_error(f"尝试自动通过验证码失败。请手动进行操作或重试！")
+                print(f"尝试自动通过验证码失败。请手动进行操作或重试！")
+                return False
 
         except Exception as e:
             throw_error(f"验证码验证失败。请手动进行操作或重试！")
+
+    def do_clock(self):
+        try:
+            print("DO FINAL CLOCK")
+            result = clock(self.driver)
+            if result:
+                return True
+            else:
+                return False
+        except Exception as e:
+            print("auto clock failed", e)
+            return False
 
     def quit(self):
         self.driver.quit()
 
     def auto_clock(self):
-        self.auto_login()
-        self.auto_captcha()
+        if self.auto_login() and self.auto_captcha():
+                return self.do_clock()
+        else:
+            return False
 
     def run(self):
-        self.auto_clock()
+        result = self.auto_clock()
+        self.driver.quit()
+        if result:
+            time.sleep(5)
+            print("操作成功!")
+            self.quit()
+        else:
+            throw_error("操作失败!")

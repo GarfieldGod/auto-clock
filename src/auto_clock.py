@@ -105,17 +105,17 @@ class AutoClock:
         self.driver.quit()
 
     def auto_clock(self):
-        if self.auto_login() and self.auto_captcha():
-                return self.do_clock()
-        else:
-            return False
+        self.auto_login()
+        self.auto_captcha()
+        return self.do_clock()
 
     def run(self):
         result = self.auto_clock()
+        print("流程结束，关闭浏览器驱动。")
         self.driver.quit()
         if result:
             time.sleep(5)
-            print("操作成功!")
+            print("最终结果：成功! 结束运行。")
             self.quit()
         else:
-            throw_error("操作失败!")
+            throw_error("最终结果：失败! 请重试。")

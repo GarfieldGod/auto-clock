@@ -11,11 +11,11 @@ if __name__ == '__main__':
 
     if not isTest:
         remote_config = Config(
-            DRIVER_PATH,
+            DRIVER_PATH, # 浏览器驱动路径
             "https://kq.neusoft.com/login",
-            "luo_zhh",
-            "God1351763110?",
-            5
+            "your username", # 用户名
+            "your password", # 密码
+            5 # 验证码重试次数
         )
         remote_clock = AutoClock(remote_config)
         remote_clock.run()

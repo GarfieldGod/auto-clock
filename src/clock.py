@@ -1,3 +1,5 @@
+import time
+
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
@@ -11,6 +13,7 @@ def clock(driver, sign_in_button_selector = ".kq-btn.pt43.clear a:first-child", 
             login_btn = waiter.until(EC.element_to_be_clickable((By.CSS_SELECTOR, sign_in_button_selector)))
             print("定位成功")
             login_btn.click()
+            print("点击成功")
         except TimeoutException:
             print("定位超时，尝试使用备选 XPath 定位并点击...")
             try:
@@ -20,6 +23,7 @@ def clock(driver, sign_in_button_selector = ".kq-btn.pt43.clear a:first-child", 
             except TimeoutException:
                 print("定位失败，操作未执行。")
                 return False
+        time.sleep(5)
         return True
     else:
         return False

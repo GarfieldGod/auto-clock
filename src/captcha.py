@@ -1,18 +1,19 @@
-# edge_login_and_captcha_test.py
-import time, base64, io, math, random, json
-from dataclasses import dataclass
+import os
+import cv2
+import numpy as np
+import time, base64, io, math, random
 
 from PIL import Image
-import numpy as np
-import cv2
-
-from selenium import webdriver
-from selenium.webdriver.edge.service import Service as EdgeService
-from selenium.webdriver.edge.options import Options
+from datetime import datetime
+from dataclasses import dataclass
+from platformdirs import user_data_dir
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+
+from utils.log import Log
+
+DataRoot = user_data_dir("screenshot", "auto-clock")
 
 # ---------------------------------------------------------------------------------------------------获取图片
 def dataurl_to_cv2(data_url):
@@ -51,9 +52,9 @@ def get_image(driver, canvas_sel):
     if dataurl:
         try:
             img = dataurl_to_cv2(dataurl)
-            print("使用 dataURL 获取图片")
+            Log.info("使用 dataURL 获取图片")
         except Exception as e:
-            print("dataURL 解析失败:", e)
+            Log.waring(f"dataURL 解析失败: {e}")
             img = None
     else:
         img = None
@@ -62,10 +63,10 @@ def get_image(driver, canvas_sel):
         png = element_screenshot_bytes(driver, canvas_sel)
         if png:
             img = png_bytes_to_cv2(png)
-            print("使用元素截图获取图片")
+            Log.info("使用元素截图获取图片")
             return img
         else:
-            print("无法获取验证码画面（dataURL 失败且元素截图失败）。")
+            Log.error("无法获取验证码画面（dataURL 失败且元素截图失败）。")
             return None
     else:
         return img
@@ -133,24 +134,23 @@ def normalize_angle(angle):
 
 def estimate_angle(img):
     angle = estimate_angle_pca(img)
-    print(f"PCA 检测角度: {angle}")
+    Log.info(f"PCA 检测角度: {angle}")
     if angle is None:
         angle = estimate_angle_hough(img)
-        print(f"Hough 检测角度: {angle}")
+        Log.info(f"Hough 检测角度: {angle}")
     if angle is None:
         angle = estimate_angle_normal(img)
-        print(f"normal 检测角度: {angle}")
+        Log.info(f"normal 检测角度: {angle}")
 
     angle = correct_angle_with_semantics(img, angle)
-    print(f"根据亮度分布修正角度: {angle}")
+    Log.info(f"根据亮度分布修正角度: {angle}")
 
     angle = normalize_angle(angle)
-    print("估计图像主方向角度:", angle)
+    Log.info(f"估计图像主方向角度: {angle}")
     return angle
 
 # ---------------------------------------------------------------------------------------------------执行滑动
-def dynamic_adjust_drag(driver, slider_elem, track_sel, canvas_sel, max_steps=20, tolerance=3):
-    actions = ActionChains(driver)
+def dynamic_adjust_drag(actions, driver, slider_elem, track_sel, canvas_sel, max_steps=20, tolerance=3):
     actions.click_and_hold(slider_elem).perform()
     moved = 0
     track_w = driver.execute_script("var el=document.querySelector(arguments[0]); if(!el) return 0; return el.getBoundingClientRect().width;",track_sel)
@@ -164,14 +164,14 @@ def dynamic_adjust_drag(driver, slider_elem, track_sel, canvas_sel, max_steps=20
             img = get_image(driver, canvas_sel)
             current_angle = estimate_angle(img)
         except Exception as e:
-            print(f"角度计算失败：{e}")
+            Log.waring(f"角度计算失败：{e}")
 
         # 角度达标则停止
         if current_angle is not None and abs(current_angle) <= tolerance:
-            print(f"角度已达标（{current_angle:.1f}°），停止拖动")
+            Log.info(f"角度已达标（{current_angle:.1f}°），停止拖动")
             break
         else:
-            print(f"角度未达标（{current_angle:.1f}°），进行拖动")
+            Log.info(f"角度未达标（{current_angle:.1f}°），进行拖动")
 
         if current_angle is not None:
             abs_angle = abs(current_angle)
@@ -204,17 +204,17 @@ def dynamic_adjust_drag(driver, slider_elem, track_sel, canvas_sel, max_steps=20
         new_angle = estimate_angle(img)
         # 判断方向（基于角度变化）（仅为低角度时判断）
         if new_angle is not None and current_angle is not None and abs(new_angle) < 10:
-            print("进入低角度检测")
+            Log.info("进入低角度检测")
             # 计算首次滑动后的角度变化（绝对值）
             angle_change = abs(current_angle) - abs(new_angle)
             if angle_change < 0:
                 # 向右滑动后角度变大→正确方向为向左（-1）
                 correct_direction = -1
-                print(f"滑动后角度增大（{abs(current_angle):.1f}°→{abs(new_angle):.1f}°），正确方向为向左")
+                Log.info(f"滑动后角度增大（{abs(current_angle):.1f}°→{abs(new_angle):.1f}°），正确方向为向左")
             else:
                 # 向右滑动后角度变小→正确方向为向右（1）
                 correct_direction = 1
-                print(f"滑动后角度减小（{abs(current_angle):.1f}°→{abs(new_angle):.1f}°），正确方向为向右")
+                Log.info(f"滑动后角度减小（{abs(current_angle):.1f}°→{abs(new_angle):.1f}°），正确方向为向右")
 
         # 动态调整延迟（角度小则延迟长）
         if current_angle is not None:
@@ -229,9 +229,6 @@ def dynamic_adjust_drag(driver, slider_elem, track_sel, canvas_sel, max_steps=20
         sleep_per_step = max(0.02, sleep_per_step)
         time.sleep(sleep_per_step)
 
-    # 松开滑块前停顿
-    time.sleep(0.1 + random.random() * 0.15)
-    actions.release().perform()
     return moved
 
 # ---------------------------------------------------------------------------------------------------执行验证流程
@@ -242,19 +239,27 @@ class Selectors:
     track: str
 
 def captcha(driver, selectors, max_attempts=3):
+    Log.info(f"进入验证流程...")
     canvas_sel=selectors.canvas
     slider_sel=selectors.slider
     track_sel=selectors.track
 
-    wait = WebDriverWait(driver, 20)
-    wait.until(lambda d: d.execute_script("return !!document.querySelector(arguments[0])", canvas_sel))
+    try:
+        wait = WebDriverWait(driver, 20)
+        wait.until(lambda d: d.execute_script("return !!document.querySelector(arguments[0])", canvas_sel))
+        Log.info(f"已定位验证码画布...")
+    except Exception as e:
+        Log.error(f"验证失败, 未查询到画布:{e}")
+        return False
 
     for attempt in range(max_attempts):
-        print(f"[尝试 {attempt+1}/{max_attempts}] 获取验证码图片...")
+        Log.info(f"----------------------------[({attempt + 1}/{max_attempts}) 尝试获取验证码图片...]----------------------------")
 
-        # 7. 执行人类样式拖动
+        # 执行人类样式拖动
+        actions = ActionChains(driver)
         slider = driver.find_element(By.CSS_SELECTOR, slider_sel)
         actual_x = dynamic_adjust_drag(
+            actions,
             driver,
             slider,
             track_sel,
@@ -262,28 +267,42 @@ def captcha(driver, selectors, max_attempts=3):
             max_steps=50,
             tolerance=3
         )
-        print(f"实际拖动距离：{actual_x}px")
+
+        screenshot_file_name = f"{datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")}_debug_canvas_attempt_{attempt + 1}"
+        screenshot_file_path = f"{DataRoot}\\{screenshot_file_name}.png"
+        try:
+            if not os.path.exists(DataRoot):
+                os.makedirs(DataRoot, exist_ok=True)
+            driver.find_element(By.CSS_SELECTOR, canvas_sel).screenshot(screenshot_file_path)
+        except Exception as e:
+            Log.error(f"验证码截图失败: {e}")
+
+        # 松开滑块前停顿
+        time.sleep(0.1 + random.random() * 0.15)
+        actions.release().perform()
+
+        Log.info(f"实际拖动距离：{actual_x}px")
 
         time.sleep(2)
         time.sleep(1.2 + random.random()*0.8)
 
-        print(f"当前页面为: {driver.current_url}")
+        result = False
+        Log.info(f"当前页面为: {driver.current_url}")
         if driver.current_url == "https://kq.neusoft.com/":
-            return True
+            result = True
 
         # 自定义检测方法：检查成功 DOM class 或 AJAX 返回（可扩展）
-        result = driver.execute_script("return (!!document.querySelector('.captcha-state .captcha-state-icon-success') && document.querySelector('.captcha-state .captcha-state-icon-success').offsetParent !== null);")
-        print("检测验证结果:", result)
+        # result = driver.execute_script("return (!!document.querySelector('.captcha-state .captcha-state-icon-success') && document.querySelector('.captcha-state .captcha-state-icon-success').offsetParent !== null);")
+        Log.info(f"检测验证结果: {result}")
         if result:
-            print("验证码可能通过，继续后续流程。")
+            Log.info(f"----------------------------[({attempt + 1}/{max_attempts}) 验证码通过，继续后续流程]----------------------------")
+            if os.path.exists(screenshot_file_path):
+                os.rename(screenshot_file_path, f"{DataRoot}\\{screenshot_file_name + "success"}.png")
             return True
         else:
-            print("此次尝试未通过，保存截图供分析并重试。")
-            try:
-                driver.find_element(By.CSS_SELECTOR, canvas_sel).screenshot(f"debug_canvas_attempt_{attempt+1}.png")
-            except Exception:
-                pass
-            time.sleep(0.6)
+            Log.info(f"----------------------------[({attempt + 1}/{max_attempts}) 此次尝试未通过，保存截图供分析并重试]----------------------------")
+            if os.path.exists(screenshot_file_path):
+                os.rename(screenshot_file_path, f"{DataRoot}\\{screenshot_file_name + "failed"}.png")
 
-    print("重试结束，未通过验证码。请查看保存的截图与后端日志。")
+    Log.error("重试结束，未通过验证码。请查看保存的截图与后端日志。")
     return False

@@ -2,9 +2,11 @@ import os
 import time
 import http.server
 import socketserver
-from dataclasses import dataclass
 from threading import Thread
+from dataclasses import dataclass
 from src.auto_clock import AutoClock, Config
+
+from utils.log import Log
 
 @dataclass
 class TestConfig:
@@ -36,23 +38,23 @@ class Test:
         os.chdir(self.web_root)
         handler = http.server.SimpleHTTPRequestHandler
         self.server = socketserver.TCPServer(("", self.port), handler)
-        print(f"本地服务器启动：http://localhost:{self.port}")
+        Log.info(f"本地服务器启动：http://localhost:{self.port}")
         try:
             self.server.serve_forever()  # 持续运行，直到 shutdown() 被调用
         except Exception as e:
-            print(f"服务器异常停止：{e}")
+            Log.error(f"服务器异常停止：{e}")
 
     def stop_server(self):
         """关闭服务器并释放资源"""
         if self.server:
-            print("正在关闭服务器...")
+            Log.info("正在关闭服务器...")
             self.server.shutdown()
             self.server.server_close()
             self.server = None
         if self.server_thread and self.server_thread.is_alive():
             self.server_thread.join(timeout=5)  # 等待线程结束（最多等5秒）
             self.server_thread = None
-        print("服务器已关闭")
+        Log.info("服务器已关闭")
 
     def run(self):
         self.server_thread = Thread(target=self.run_server, daemon=True)
@@ -72,7 +74,7 @@ class Test:
         for i in range(self.test_times):
             test_clock = AutoClock(test_config)
             result = test_clock.run()
-            print(f"result {i} is {result}.")
+            Log.info(f"result {i} is {result}.")
             if result:
                 pass_case += 1
             else:
@@ -82,7 +84,7 @@ class Test:
 
         self.stop_server()
 
-        print(f"Final result PASS: {pass_case/self.test_times} Failed: {failed_case/self.test_times}.")
+        Log.info(f"Final result PASS: {pass_case/self.test_times} Failed: {failed_case/self.test_times}.")
 
 def run_test():
     test_config = TestConfig(

@@ -1,18 +1,19 @@
 import time
-from logging import exception
+import traceback
 
-from numpy.f2py.auxfuncs import throw_error
 from selenium import webdriver
+from dataclasses import dataclass
+from selenium.webdriver.common.by import By
+from selenium.common import TimeoutException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-from dataclasses import dataclass
 
+from utils.log import Log
+from src.clock import clock
 from src.login import login
 from src.captcha import captcha, Selectors
-from src.clock import clock
 
 @dataclass
 class Config:
@@ -35,7 +36,7 @@ class AutoClock:
         try:
             self.driver = self.create_driver()
         except Exception as e:
-            print(f"Create driver error: {e}")
+            Log.error(f"Create driver error: {e}")
 
     def create_driver(self):
         # 创建浏览器驱动
@@ -46,30 +47,36 @@ class AutoClock:
         service = Service(executable_path=self.driver_path)
         driver = webdriver.Edge(service=service)
 
-        print("create driver successfully")
+        Log.info("create driver successfully")
         return driver
 
     def auto_login(self):
         try:
-            print("DO AUTO CLOCK")
-            print(f"打开URL：{self.remote_url}")
+            Log.info("DO AUTO CLOCK")
             self.driver.get(self.remote_url)
+            Log.info(f"打开URL：{self.remote_url}")
             result = login(self.driver, self.user_name, self.user_password, wait=self.wait_time)
             if result:
-                print("已尝试提交登录表单，请在浏览器中确认是否成功。")
+                Log.info("已尝试提交登录表单。")
             else:
-                print("自动登录执行失败，请检查选择器或页面加载。")
-                return False
+                info = "自动登录执行失败，请检查选择器或页面加载。"
+                Log.error(info)
+                raise Exception(info)
 
             time.sleep(2)
-            WebDriverWait(self.driver, 1).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "#loginButton")))
-            print("登录表单已消失，可能登录成功。")
+            WebDriverWait(self.driver, 3).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "#loginButton")))
+            Log.info("登录表单已消失，可能登录成功。")
             return True
 
+        except TimeoutException as e:
+            Log.error(f"等待到元素消失超时，登录状态未知")
+            return False
         except Exception as e:
-            throw_error(f"登录失败: {e}")
+            info = f"登录失败: {e}"
+            Log.error(info)
+            raise Exception(info)
         finally:
-            print("已完成登录操作；保留浏览器窗口。请手动关闭浏览器。")
+            Log.info("登录流程结束; 保留浏览器窗口。")
 
     def auto_captcha(self):
         try:
@@ -80,42 +87,63 @@ class AutoClock:
             )
             result = captcha(self.driver, selectors=selectors, max_attempts=self.captcha_attempts)
             if result:
-                print(f"识别验证码成功。")
+                Log.info(f"识别验证码成功。")
                 return True
             else:
-                print(f"尝试自动通过验证码失败。请手动进行操作或重试！")
+                Log.error(f"尝试自动通过验证码失败。请手动进行操作或重试！")
                 return False
 
         except Exception as e:
-            throw_error(f"验证码验证失败。请手动进行操作或重试！")
+            tb = traceback.extract_tb(e.__traceback__)
+            # 堆栈信息的最后一条是错误发生的位置
+            if tb:
+                last_frame = tb[-1]  # 最后一个栈帧是错误源头
+                error_file = last_frame.filename  # 错误发生的文件名
+                error_line = last_frame.lineno  # 错误发生的行号
+                error_code = last_frame.line  # 错误发生的代码行
+            else:
+                error_file = "未知文件"
+                error_line = "未知行号"
+                error_code = "未知代码"
+
+            # 记录包含错误行号的日志
+            Log.error(f"验证码验证失败：{str(e)} | 错误位置：{error_file}:{error_line} | 代码：{error_code}")
+
+            info = f"验证码验证失败。请手动进行操作或重试！{e}"
+            Log.error(info)
+            raise Exception(info)
 
     def do_clock(self):
         try:
-            print("DO FINAL CLOCK")
+            Log.info("DO FINAL CLOCK")
             result = clock(self.driver)
             if result:
                 return True
             else:
                 return False
         except Exception as e:
-            print("auto clock failed", e)
+            Log.error(f"auto clock failed: {e}")
             return False
 
     def quit(self):
         self.driver.quit()
 
     def auto_clock(self):
-        self.auto_login()
-        self.auto_captcha()
-        return self.do_clock()
+        try:
+            self.auto_login()
+            self.auto_captcha()
+            return self.do_clock()
+        except Exception as e:
+            return False
 
     def run(self):
         result = self.auto_clock()
-        print("流程结束，关闭浏览器驱动。")
+        Log.info("流程结束，关闭浏览器驱动。")
         self.driver.quit()
         if result:
             time.sleep(5)
-            print("最终结果：成功! 结束运行。")
-            self.quit()
+            Log.info("最终结果：成功! 结束运行。")
+            return True
         else:
-            throw_error("最终结果：失败! 请重试。")
+            Log.error("最终结果：失败! 请重试。")
+            return False

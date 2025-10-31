@@ -1,17 +1,17 @@
-import json
 import os
 import sys
+import json
 
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDialog, QGroupBox,
-    QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QLineEdit, QTextEdit, QListWidget, QListWidgetItem, QCheckBox,
+    QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QCheckBox,
     QPushButton, QDialogButtonBox, QSizePolicy
 )
-from PyQt5.QtGui import QFont, QPixmap, QResizeEvent,  QIcon
-from PyQt5.QtCore import QSize, Qt
-from numpy.f2py.auxfuncs import throw_error
 from platformdirs import user_data_dir
-from entry import ClockManager
+
+from entry import ClockManager, run_clock
 
 DataRoot = user_data_dir("data", "auto-clock")
 
@@ -126,31 +126,35 @@ class ConfigWindow(QMainWindow):
         self.setCentralWidget(widget_global)
 # 功能---------------------------------------------------------------------------------------------
         self.button_confirm.clicked.connect(self.confirm)
+        self.button_try.clicked.connect(self.try_now)
 
         self.load()
 
-    def confirm(self):
+    def write_json(self):
         data = {
             "user_name": self.user_name.text(),
             "user_password": self.user_password.text(),
-            "captcha_retry_times": self.captcha_retry_times.text(),
+            "captcha_retry_times": int(self.captcha_retry_times.text()),
             "always_retry_check_box": self.always_retry_check_box.isChecked(),
             "captcha_failed_email": self.captcha_failed_email.text(),
             "driver_path": self.driver_path.text()
         }
+        if not os.path.exists(DataRoot):
+            os.makedirs(DataRoot)
+
         try:
-            if not os.path.exists(DataRoot):
-                os.makedirs(DataRoot)
+            ok = ClockManager.check_data(data)
+            if not ok:
+                raise Exception("Unknow Error")
+        except Exception as e:
+            raise Exception(e)
 
-            try:
-                ok = ClockManager.check_data(data)
-                if not ok:
-                    raise Exception("Unknow Error")
-            except Exception as e:
-                raise Exception(e)
+        with open(f"{DataRoot}\\data.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
 
-            with open(f"{DataRoot}\\data.json", "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
+    def confirm(self):
+        try:
+            self.write_json()
 
             MessageBox(f"Confirmation Success!")
             quit()
@@ -166,7 +170,7 @@ class ConfigWindow(QMainWindow):
                 data = json.load(f)
                 self.user_name.setText(data["user_name"])
                 self.user_password.setText(data["user_password"])
-                self.captcha_retry_times.setText(data["captcha_retry_times"])
+                self.captcha_retry_times.setText(str(data["captcha_retry_times"]))
                 self.always_retry_check_box.setChecked(data["always_retry_check_box"])
                 self.captcha_failed_email.setText(data["captcha_failed_email"])
                 self.driver_path.setText(data["driver_path"])
@@ -174,6 +178,13 @@ class ConfigWindow(QMainWindow):
         except Exception as e:
             MessageBox(f"Load Data Failed!\nError: {e}")
             print(e)
+
+    def try_now(self):
+        try:
+            self.write_json()
+        except Exception as e:
+            MessageBox(f"Try Failed!\nError: {e}")
+        run_clock()
 
     def get_group_css(self, css_data):
         background_color = css_data["BackGround_Color"] if css_data.get("BackGround_Color") is not None and css_data["BackGround_Color"] != "" else BackGround_Color

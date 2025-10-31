@@ -83,3 +83,15 @@ class Test:
         self.stop_server()
 
         print(f"Final result PASS: {pass_case/self.test_times} Failed: {failed_case/self.test_times}.")
+
+def run_test():
+    test_config = TestConfig(
+        "C:/Application/Edge_Driver/msedgedriver.exe",
+        "test/page",
+        "test_page.html",
+        8000,
+        10,
+        3
+    )
+    test_clock = Test(test_config)
+    test_clock.run()

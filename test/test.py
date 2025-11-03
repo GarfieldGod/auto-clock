@@ -4,7 +4,7 @@ import http.server
 import socketserver
 from threading import Thread
 from dataclasses import dataclass
-from src.auto_clock import AutoClock, Config
+from src.core.auto_clock import AutoClock, Config
 
 from utils.log import Log
 

@@ -1,17 +1,18 @@
 import os
-import sys
 import json
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt, QDate
+from PyQt5.QtGui import QFont, QPalette, QColor
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDialog, QGroupBox,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QCheckBox,
-    QPushButton, QDialogButtonBox, QSizePolicy
+    QPushButton, QDialogButtonBox, QSizePolicy, QFormLayout, QComboBox, QSpacerItem
 )
 from platformdirs import user_data_dir
 
-from src.clock_manager import ClockManager, run_clock, get_driver_path
+from src.core.clock_manager import ClockManager, run_clock, get_driver_path
+from src.extend.auto_windows_login import auto_windows_login_on, auto_windows_login_off
+from src.ui.calendar import Calendar
 
 DataRoot = user_data_dir("data", "auto-clock")
 
@@ -89,6 +90,13 @@ class ConfigWindow(QMainWindow):
         layout_sys.addWidget(QLabel("Failure Notification Email:"))
         layout_sys.addWidget(self.captcha_failed_email)
         layout_sys.addWidget(widget_retry)
+        # Windows Config
+        group_windows_config = QGroupBox("Windows Config")
+        group_windows_config.setStyleSheet(self.get_group_css({}))
+        layout_windows = QVBoxLayout(group_windows_config)
+        self.auto_windows_login_on = QPushButton("Set Windows Auto Login")
+        self.auto_windows_login_on.clicked.connect(self.auto_login_windows)
+        layout_windows.addWidget(self.auto_windows_login_on)
         # Plan List
         group_plan_list = QGroupBox("Plan List")
         group_plan_list.setStyleSheet(self.get_group_css({}))
@@ -97,6 +105,7 @@ class ConfigWindow(QMainWindow):
         layout_plan_list.addWidget(self.widget_plan_list)
         widget_plan_list_buttons = QWidget()
         self.button_create = QPushButton("Create")
+        self.button_create.clicked.connect(self.create_windows_plan)
         self.button_delete = QPushButton("Delete")
         layout_plan_list_buttons = QHBoxLayout(widget_plan_list_buttons)
         layout_plan_list_buttons.addWidget(self.button_create)
@@ -129,6 +138,7 @@ class ConfigWindow(QMainWindow):
         layout_global.addWidget(group_user)
         layout_global.addWidget(group_sys)
         layout_global.addWidget(group_plan_list)
+        layout_global.addWidget(group_windows_config)
         layout_global.addWidget(widget_confirm)
         self.setCentralWidget(widget_global)
 # 功能---------------------------------------------------------------------------------------------
@@ -242,8 +252,175 @@ class ConfigWindow(QMainWindow):
         """
         return css
 
+    def auto_login_windows(self):
+        dlg = WindowsLoginDialog(self)
+        if dlg.exec_() == QDialog.Accepted:
+            name, password = dlg.values()
+            if not name or not name.strip():
+                return
+        else:
+            return
+        try:
+            backup_path = auto_windows_login_on(name, password)
+            MessageBox(f"Set Windows Auto Login Success!\nwindows config backup path: {backup_path}")
+        except Exception as e:
+            MessageBox(f"Set Windows Auto Login Failed!\nError: {e}")
+
+    def create_windows_plan(self):
+        dlg = WindowsPlanDialog(self)
+        if dlg.exec_() == QDialog.Accepted:
+            pass
+        else:
+            return
+
+class WindowsLoginDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Set Windows Auto Login")
+        self.name_edit = QLineEdit()
+        self.password_edit = QLineEdit()
+        self.button_clear_auto_login = QPushButton("Clear")
+        self.button_clear_auto_login.clicked.connect(self.clear_auto_login)
+
+        form = QFormLayout(self)
+        form.addRow("Windows User Name:", self.name_edit)
+        form.addRow("Windows User Password:", self.password_edit)
+        form.addRow("Clear Auto Login:", self.button_clear_auto_login)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        form.addRow(buttons)
+
+    def values(self):
+        return self.name_edit.text().strip(), self.password_edit.text().strip()
+
+    def clear_auto_login(self):
+        try:
+            backup_path = auto_windows_login_off()
+            MessageBox(f"Clear Success!\nbackup before clear: {backup_path}")
+        except Exception as e:
+            MessageBox(f"Clear Failed!\nError: {e}")
+
+class WindowsPlanDialog(QDialog):
+    trigger_types = ["Multiple", "once", "daily", "weekly", "monthly"]
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        try:
+            self.setWindowTitle("Create Windows Plan")
+            self.plan_name_edit = QLineEdit()
+            self.trigger_type = QComboBox()
+            self.trigger_type.addItems(["once", "Multiple", "daily", "weekly", "monthly"])
+            self.trigger_type.currentTextChanged.connect(self.trigger_type_changed)
+
+            widget_layout = QVBoxLayout(self)
+
+            widget_setting = QWidget()
+            layout_setting = QVBoxLayout(widget_setting)
+            widget_line_1 = QHBoxLayout()
+            widget_line_1.addWidget(QLabel("Plan Name:"))
+            widget_line_1.addWidget(self.plan_name_edit)
+            widget_line_2 = QHBoxLayout()
+            widget_line_2.addWidget(QLabel("Trigger Type:"))
+            widget_line_2.addWidget(self.trigger_type)
+            layout_setting.addLayout(widget_line_1)
+            layout_setting.addLayout(widget_line_2)
+            widget_layout.addWidget(widget_setting)
+            widget_layout.addStretch()
+
+            self.calendar_selector = Calendar()
+            palette = self.calendar_selector.calendar.palette()
+            palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Base, QColor(255, 0, 0))
+            COLOR_GRAY = QColor(245, 245, 245)
+            COLOR_DARK_GRAY = QColor(64, 64, 64)
+            palette.setColor(QPalette.Highlight, COLOR_GRAY)
+            palette.setColor(QPalette.HighlightedText, COLOR_DARK_GRAY)
+            self.calendar_selector.calendar.setPalette(palette)
+
+            self.widget_one_day_selector = QWidget()
+            self.layout_one_day_selector = QHBoxLayout(self.widget_one_day_selector)
+            self.year_sel = QComboBox()
+            self.year_sel.addItems([str(QDate.currentDate().year()), str(QDate.currentDate().addYears(1).year())])
+            self.year_sel.currentIndexChanged.connect(self.year_changed)
+            self.month_sel = QComboBox()
+            self.month_sel.addItems(self.get_nums_array(1,12))
+            self.month_sel.currentIndexChanged.connect(self.month_changed)
+            self.day_sel = QComboBox()
+            self.day_sel.addItems(self.get_nums_array(1, 31))
+            self.hour_sel = QComboBox()
+            self.hour_sel.addItems(self.get_nums_array(0,23))
+            self.minute_sel = QComboBox()
+            self.minute_sel.addItems(self.get_nums_array(0,59))
+            self.layout_one_day_selector.addWidget(self.year_sel)
+            self.layout_one_day_selector.addWidget(self.month_sel)
+            self.layout_one_day_selector.addWidget(self.day_sel)
+            self.layout_one_day_selector.addWidget(self.hour_sel)
+            self.layout_one_day_selector.addWidget(self.minute_sel)
+
+            self.space_area = QHBoxLayout()
+            self.space_area.addWidget(self.calendar_selector)
+            self.space_area.addWidget(self.widget_one_day_selector)
+            widget_layout.addLayout(self.space_area)
+            self.space_area_hide_all_content()
+            self.widget_one_day_selector.show()
+
+            buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+            buttons.accepted.connect(self.accept)
+            buttons.rejected.connect(self.reject)
+            widget_layout.addWidget(buttons)
+        except Exception as e:
+            print(e)
+
+    def year_changed(self):
+        self.month_sel.setCurrentIndex(0)
+        self.day_sel.setCurrentIndex(0)
+
+    def month_changed(self):
+        self.day_sel.clear()
+        if self.month_sel.currentText() in ["01", "03", "05", "07", "08", "10", "12"]:
+            day = 31
+        elif self.month_sel.currentText() == "02":
+            if QDate.isLeapYear(int(self.year_sel.currentText())):
+                day = 28
+            else:
+                day = 29
+        else:
+            day = 30
+        self.day_sel.addItems(self.get_nums_array(1, day))
+        self.day_sel.setCurrentIndex(0)
+
+    def get_nums_array(self, start, end, bit=2):
+        num_array = []
+        for i in range(start, end + 1):
+            num_str = str(i)
+            if len(num_str) < bit:
+                num_str = "0" * (bit - len(num_str)) + num_str
+            num_array.append(num_str)
+        return num_array
+
+    def space_area_hide_all_content(self):
+        for i in range(self.space_area.count()):
+            item = self.space_area.itemAt(i)
+            widget = item.widget()
+            if widget is not None:
+                widget.hide()
+
+    def trigger_type_changed(self):
+        self.space_area_hide_all_content()
+        if self.trigger_type.currentText() == self.trigger_types[0]:
+            self.calendar_selector.show()
+        elif self.trigger_type.currentText() == self.trigger_types[1]:
+            self.widget_one_day_selector.show()
+        else:
+            pass
+        self.adjustSize()
+
+    def values(self):
+        return self.plan_name_edit.text().strip(), self.trigger_type.text().strip()
+
 class MessageBox(QDialog):
-    def __init__(self, message, message_name="Massage", parent=None):
+    def __init__(self, message, message_name="Message", parent=None):
         super().__init__(parent)
         self.setWindowTitle(message_name)
 

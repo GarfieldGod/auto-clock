@@ -1,14 +1,14 @@
 import sys
 from PyQt5.QtWidgets import (QApplication, QWidget, QGridLayout, QPushButton,
                              QLabel, QHBoxLayout, QToolButton, QVBoxLayout, QSizePolicy)
-from PyQt5.QtCore import QDate, Qt, pyqtSignal
-from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtCore import QDate, Qt, QLocale
 
-class CustomCalendar(QWidget):
+class Calendar(QWidget):
     selected_dates = []
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.locale = QLocale(QLocale.English)
         self.init_ui()
         self.current_date = QDate.currentDate()
         self.refresh_calendar()
@@ -21,7 +21,7 @@ class CustomCalendar(QWidget):
         self.main_layout.setSpacing(15)
 
         widget_nav = QWidget(self)
-        widget_nav.setStyleSheet("background-color: rgb(255, 255, 255);")
+        widget_nav.setStyleSheet("background-color: rgb(255, 255, 255);border: 1px solid #8b8b8b;border-radius: 4px;")
         self.nav_layout = QHBoxLayout(widget_nav)
         self.prev_btn = QToolButton()
         self.prev_btn.setText("<")
@@ -30,7 +30,7 @@ class CustomCalendar(QWidget):
         self.nav_layout.addWidget(self.prev_btn)
 
         self.date_label = QLabel()
-        self.date_label.setStyleSheet("font-size: 18px; font-weight: bold; text-align: center;")
+        self.date_label.setStyleSheet("font-size: 18px; font-weight: bold; text-align: center;font-family: Arial, \"Helvetica Neue\", sans-serif;")
         self.nav_layout.addWidget(self.date_label, stretch=1)
         self.date_label.setAlignment(Qt.AlignCenter)
         self.date_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -43,30 +43,32 @@ class CustomCalendar(QWidget):
 
         # 网格布局
         widget_grid = QWidget()
-        widget_grid.setStyleSheet("background-color: rgb(255, 255, 255);")
+        widget_grid.setStyleSheet("background-color: rgb(255, 255, 255);border: 1px solid #8b8b8b;border-radius: 4px;")
         self.grid_layout = QGridLayout(widget_grid)
         self.grid_layout.setSpacing(2)
-        self.grid_layout.setContentsMargins(0, 10, 0, 0)
+        self.grid_layout.setContentsMargins(10, 10, 10, 10)
 
         # 星期表头
         self.weekdays = [ "7", "1", "2", "3", "4", "5", "6"]
         for col, day in enumerate(self.weekdays):
-            label = QLabel(day)
-            label.setStyleSheet("""
-                QLabel {
-                    text-align: center;
+            week_en = self.locale.dayName(int(day), QLocale.ShortFormat)
+            label = QLabel(week_en)
+            label.setAlignment(Qt.AlignCenter)
+            label.setStyleSheet(f"""
+                QLabel {{
+                    font-family: Arial, "Helvetica Neue", sans-serif;
                     font-size: 14px;
                     font-weight: bold;
-                    color: #333;
-                    background-color: #f0f0f0;
+                    color: {"#ff0000" if day == "7" or day == "6" else "#333"};
+                    background-color: {"#d0d0d0" if day == "7" or day == "6" else "#f0f0f0"};
                     padding: 8px 0;
                     border-radius: 4px;
-                }
+                }}
             """)
             self.grid_layout.addWidget(label, 0, col)
 
         self.date_buttons = []
-        for row in range(0, 6):
+        for row in range(1, 7):
             row_buttons = []
             for col in range(7):
                 btn = QPushButton()
@@ -84,6 +86,8 @@ class CustomCalendar(QWidget):
     def get_btn_style(self):
         return """
             QPushButton:!checked:enabled {
+                font-weight: bold;
+                font-family: Arial, "Helvetica Neue", sans-serif;
                 text-align: center;
                 font-size: 14px;
                 color: #333;
@@ -104,6 +108,7 @@ class CustomCalendar(QWidget):
                 border: 1px solid #3dbbb4;
                 border-radius: 4px;
                 padding: 10px 0;
+                font-weight: bold;
             }
             QPushButton:checked:enabled:hover {
                 background-color: #3dbbb4;
@@ -135,12 +140,20 @@ class CustomCalendar(QWidget):
                 background-color: #4ecdc4;
                 border: 1px solid #3dbbb4;
             }
+            QPushButton#not_this_month:!checked:enabled {
+                color: #ccc;
+                background-color: #fafafa;
+                border-color: #eee;
+                border-radius: 4px;
+                padding: 10px 0;
+            }
         """
 
     def refresh_calendar(self):
         year = self.current_date.year()
         month = self.current_date.month()
-        self.date_label.setText(f"{year} {month}")
+        month_full = self.locale.toString(QDate(2025, month, 1), "MMMM")
+        self.date_label.setText(f"{month_full} {year}")
 
         first_day = QDate(year, month, 1)
         last_day = QDate(year, month, first_day.daysInMonth())
@@ -160,23 +173,34 @@ class CustomCalendar(QWidget):
                 btn.setProperty("date", None)
 
         current_day = 1
+        next_month_day = 1
         for row in range(6):
             for col in range(7):
-                if row == 0 and col < first_weekday:
-                    continue
-                if current_day > last_day.day():
-                    break
-
                 btn = self.date_buttons[row][col]
-                btn.setText(str(current_day))
-                btn_date = QDate(year, month, current_day)
+                date = QDate(year, month, current_day)
+                day_str = str(current_day)
+                if row == 0 and col < first_weekday:
+                    last_month = self.current_date.addMonths(-1)
+                    date = QDate(year - 1 if self.current_date.month() == 1 else year, last_month.month(), last_month.daysInMonth() - first_weekday + col + 1)
+                    day_str = str(last_month.daysInMonth() - first_weekday + col + 1)
+                    btn.setObjectName("not_this_month")
+                elif current_day > last_day.day():
+                    next_month = self.current_date.addMonths(1)
+                    date = QDate(year + 1 if self.current_date.month() == 12 else year, next_month.month(), next_month_day)
+                    day_str = str(next_month_day)
+                    btn.setObjectName("not_this_month")
+                    next_month_day += 1
+                else:
+                    if date == QDate.currentDate():
+                        btn.setObjectName("today")
+                    if col == week_to_col["6"] or col == week_to_col["7"]:
+                        btn.setObjectName("weekend")
+                    current_day += 1
+
+                btn.setText(day_str)
+                btn_date = date
                 btn.setProperty("date", btn_date)
                 btn.setChecked(btn_date in self.selected_dates)
-
-                if btn_date == QDate.currentDate():
-                    btn.setObjectName("today")
-                if col == week_to_col["6"] or col == week_to_col["7"]:
-                    btn.setObjectName("weekend")
 
                 btn.setStyleSheet(self.get_btn_style())
 
@@ -184,8 +208,6 @@ class CustomCalendar(QWidget):
                     btn.setEnabled(True)
                 else:
                     btn.setEnabled(False)
-
-                current_day += 1
 
     def on_date_click(self, btn):
         selected_date = btn.property("date")
@@ -213,7 +235,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
 
-    calendar = CustomCalendar()
+    calendar = Calendar()
     calendar.show()
 
     sys.exit(app.exec_())

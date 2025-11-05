@@ -1,7 +1,7 @@
 import os
 import json
 
-from PyQt5.QtCore import Qt, QDate
+from PyQt5.QtCore import Qt, QDate, QLocale
 from PyQt5.QtGui import QFont, QPalette, QColor
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDialog, QGroupBox,
@@ -12,7 +12,9 @@ from platformdirs import user_data_dir
 
 from src.core.clock_manager import ClockManager, run_clock, get_driver_path
 from src.extend.auto_windows_login import auto_windows_login_on, auto_windows_login_off
-from src.ui.calendar import Calendar
+from src.ui.ui_calendar import Calendar
+from src.extend.auto_windows_plan import create_task
+from utils.log import Log
 
 DataRoot = user_data_dir("data", "auto-clock")
 
@@ -215,7 +217,8 @@ class ConfigWindow(QMainWindow):
                 return True
         except Exception as e:
             MessageBox(f"Load Data Failed!\nError: {e}")
-            print(e)
+            Log.info(e)
+            return False
 
     def try_now(self):
         try:
@@ -267,11 +270,85 @@ class ConfigWindow(QMainWindow):
             MessageBox(f"Set Windows Auto Login Failed!\nError: {e}")
 
     def create_windows_plan(self):
-        dlg = WindowsPlanDialog(self)
-        if dlg.exec_() == QDialog.Accepted:
-            pass
-        else:
-            return
+        try:
+            plan_ui = WindowsPlanDialog(self)
+            if plan_ui.exec_() == QDialog.Accepted:
+                value = plan_ui.values()
+                Log.info(f"create windows plan value: {value}")
+                plan_name = value.get("plan_name")
+                trigger_type = value.get("trigger_type")
+                operation = value.get("operation")
+                if not value or not trigger_type or not operation:
+                    return
+                # if not plan_name:
+                #     MessageBox("You have to enter the plan name!")
+                #     return
+
+                execute_time = value.get("hour") + ":" + value.get("minute")
+                task_name = operation + "_" + trigger_type + "_"
+                task = {
+                    "operation": operation,
+                    "trigger_type": trigger_type,
+                    "execute_time": execute_time
+                }
+
+                if trigger_type == "Multiple":
+                    days = value.get("calendar")
+                    ret = True
+                    error_message = ""
+                    for day in days:
+                        task["plan_name"] = plan_name
+                        execute_day = str(day.year()) + "-" + str(get_nums_array(day.month(),day.month(),2)[0]) + "-" + str(get_nums_array(day.day(),day.day(),2)[0])
+                        task["execute_day"] = execute_day
+                        temp_name = task_name
+                        temp_name += execute_day
+                        if task.get("plan_name") is None or task.get("plan_name") == "" or task.get("plan_name") == "Default":
+                            task["plan_name"] = temp_name + "_" + execute_time
+                        else:
+                            task["plan_name"] += "_" + execute_day
+                        task["plan_name"] = task["plan_name"].replace(":", "_").replace(" ", "_").replace("-", "_")
+                        Log.info(task)
+                        ok, error = create_task(task)
+                        if error:
+                            error_message += str(error) + "\n"
+                        if ok is False: ret = False
+                    if ret:
+                        MessageBox("Create Task Success!")
+                    else:
+                        raise Exception(error_message)
+                else:
+                    task["plan_name"] = plan_name
+                    if trigger_type == "Once":
+                        date = QDate(int(value.get("year")), int(value.get("month")), int(value.get("day")))
+                        execute_day = value.get("year") + "-" + value.get("month") + "-" + value.get("day")
+                        if date < QDate.currentDate():
+                            raise Exception(f"Invalid Date: {execute_day} Early than Today!")
+                        task["execute_day"] = execute_day
+                        task_name += execute_day
+                    elif trigger_type == "Weekly":
+                        task["Weekly"] = value.get("weekly")
+                        task_name += value.get("weekly")
+                    elif trigger_type == "Monthly":
+                        task["monthly"] = value.get("monthly")
+                        task_name += value.get("monthly")
+                    task_name += "_" + execute_time
+                    if task.get("plan_name") is None or task.get("plan_name") == "" or task.get("plan_name") == "Default":
+                        task["plan_name"] = task_name
+                    task["plan_name"] = task["plan_name"].replace(":", "_").replace(" ", "_").replace("-", "_")
+                    Log.info(task)
+                    print(task)
+                    ok, error = create_task(task)
+                    if error:
+                        raise Exception(error)
+                    else:
+                        MessageBox("Create Task Success!")
+
+                Log.info(f"create windows plan task: {task}")
+            else:
+                return
+        except Exception as e:
+            Log.error(str(e))
+            MessageBox(str(e))
 
 class WindowsLoginDialog(QDialog):
     def __init__(self, parent=None):
@@ -302,75 +379,128 @@ class WindowsLoginDialog(QDialog):
         except Exception as e:
             MessageBox(f"Clear Failed!\nError: {e}")
 
+def create_label(message, size=11, length=150, family="Arial"):
+    label = QLabel(message)
+    font = QFont()
+    font.setFamily(family)
+    font.setPointSize(size)
+    label.setFont(font)
+    label.setFixedWidth(length)
+    return label
+
 class WindowsPlanDialog(QDialog):
-    trigger_types = ["Multiple", "once", "daily", "weekly", "monthly"]
+    trigger_types = ["Once", "Multiple", "Daily", "Weekly", "Monthly"]
+    operation_types = ["Auto Clock", "Shut Down Windows"]
 
     def __init__(self, parent=None):
         super().__init__(parent)
         try:
+            self.setMinimumWidth(500)
             self.setWindowTitle("Create Windows Plan")
             self.plan_name_edit = QLineEdit()
+            self.plan_name_edit.setText("Default")
             self.trigger_type = QComboBox()
-            self.trigger_type.addItems(["once", "Multiple", "daily", "weekly", "monthly"])
+            self.trigger_type.addItems(self.trigger_types)
             self.trigger_type.currentTextChanged.connect(self.trigger_type_changed)
+            self.operation = QComboBox()
+            self.operation.addItems(self.operation_types)
+            self.locale = QLocale(QLocale.English)
 
             widget_layout = QVBoxLayout(self)
 
+            # 常规设置
             widget_setting = QWidget()
             layout_setting = QVBoxLayout(widget_setting)
             widget_line_1 = QHBoxLayout()
-            widget_line_1.addWidget(QLabel("Plan Name:"))
+            # 选择Plan Name
+            widget_line_1.addWidget(create_label("Plan Name:"))
             widget_line_1.addWidget(self.plan_name_edit)
             widget_line_2 = QHBoxLayout()
-            widget_line_2.addWidget(QLabel("Trigger Type:"))
+            # 选择Trigger Type
+            widget_line_2.addWidget(create_label("Trigger Type:"))
             widget_line_2.addWidget(self.trigger_type)
+            # 选择Operation
+            widget_line_3 = QHBoxLayout()
+            widget_line_3.addWidget(create_label("Operation:"))
+            widget_line_3.addWidget(self.operation)
             layout_setting.addLayout(widget_line_1)
             layout_setting.addLayout(widget_line_2)
+            layout_setting.addLayout(widget_line_3)
             widget_layout.addWidget(widget_setting)
+            # 选择DayTime
+            self.widget_day_time_selector = QWidget()
+            self.layout_day_time_selector = QHBoxLayout(self.widget_day_time_selector)
+            self.hour_sel = QComboBox()
+            self.hour_sel.addItems(get_nums_array(0,23))
+            self.minute_sel = QComboBox()
+            self.minute_sel.addItems(get_nums_array(0,59))
+            self.layout_day_time_selector.addWidget(create_label("DayTime:"))
+            self.layout_day_time_selector.addStretch()
+            self.layout_day_time_selector.addWidget(create_label("Hours:", size=10, length=50))
+            self.layout_day_time_selector.addWidget(self.hour_sel)
+            self.layout_day_time_selector.addWidget(create_label("Minute:", size=10, length=50))
+            self.layout_day_time_selector.addWidget(self.minute_sel)
+            widget_layout.addWidget(self.widget_day_time_selector)
+
             widget_layout.addStretch()
 
+            # 批量选择
             self.calendar_selector = Calendar()
-            palette = self.calendar_selector.calendar.palette()
-            palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Base, QColor(255, 0, 0))
-            COLOR_GRAY = QColor(245, 245, 245)
-            COLOR_DARK_GRAY = QColor(64, 64, 64)
-            palette.setColor(QPalette.Highlight, COLOR_GRAY)
-            palette.setColor(QPalette.HighlightedText, COLOR_DARK_GRAY)
-            self.calendar_selector.calendar.setPalette(palette)
 
+            # 指定日
             self.widget_one_day_selector = QWidget()
             self.layout_one_day_selector = QHBoxLayout(self.widget_one_day_selector)
             self.year_sel = QComboBox()
             self.year_sel.addItems([str(QDate.currentDate().year()), str(QDate.currentDate().addYears(1).year())])
             self.year_sel.currentIndexChanged.connect(self.year_changed)
             self.month_sel = QComboBox()
-            self.month_sel.addItems(self.get_nums_array(1,12))
+            self.month_sel.addItems(get_nums_array(1,12))
             self.month_sel.currentIndexChanged.connect(self.month_changed)
             self.day_sel = QComboBox()
-            self.day_sel.addItems(self.get_nums_array(1, 31))
-            self.hour_sel = QComboBox()
-            self.hour_sel.addItems(self.get_nums_array(0,23))
-            self.minute_sel = QComboBox()
-            self.minute_sel.addItems(self.get_nums_array(0,59))
+            self.day_sel.addItems(get_nums_array(1, 31))
+            self.layout_one_day_selector.addWidget(create_label("Year:", size=10, length=50))
             self.layout_one_day_selector.addWidget(self.year_sel)
+            self.layout_one_day_selector.addWidget(create_label("Month:", size=10, length=50))
             self.layout_one_day_selector.addWidget(self.month_sel)
+            self.layout_one_day_selector.addWidget(create_label("Day:", size=10, length=50))
             self.layout_one_day_selector.addWidget(self.day_sel)
-            self.layout_one_day_selector.addWidget(self.hour_sel)
-            self.layout_one_day_selector.addWidget(self.minute_sel)
+            # 每日
+            self.widget_daily_selector = QWidget()
+            # 指定每周
+            self.widget_weekly_selector = QWidget()
+            self.layout_weekly_selector = QHBoxLayout(self.widget_weekly_selector)
+            self.weekly_day_sel = QComboBox()
+            for i in range(1, 8):
+                self.weekly_day_sel.addItem(self.locale.dayName(int(i), QLocale.ShortFormat))
+            self.layout_weekly_selector.addWidget(create_label("The Day:"))
+            self.layout_weekly_selector.addWidget(self.weekly_day_sel)
+            # 指定每月
+            self.widget_monthly_selector = QWidget()
+            self.layout_monthly_selector = QHBoxLayout(self.widget_monthly_selector)
+            self.monthly_day_sel = QComboBox()
+            self.monthly_day_sel.addItems(get_nums_array(1,31))
+            self.layout_monthly_selector.addWidget(create_label("The Day:"))
+            self.layout_monthly_selector.addWidget(self.monthly_day_sel)
 
-            self.space_area = QHBoxLayout()
-            self.space_area.addWidget(self.calendar_selector)
+            # 预留变化区
+            self.space_area = QVBoxLayout()
             self.space_area.addWidget(self.widget_one_day_selector)
+            self.space_area.addWidget(self.calendar_selector)
+            self.space_area.addWidget(self.widget_daily_selector)
+            self.space_area.addWidget(self.widget_weekly_selector)
+            self.space_area.addWidget(self.widget_monthly_selector)
             widget_layout.addLayout(self.space_area)
             self.space_area_hide_all_content()
             self.widget_one_day_selector.show()
 
+            # 按键
             buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
             buttons.accepted.connect(self.accept)
             buttons.rejected.connect(self.reject)
             widget_layout.addWidget(buttons)
         except Exception as e:
-            print(e)
+            Log.error(e)
+            MessageBox(e)
 
     def year_changed(self):
         self.month_sel.setCurrentIndex(0)
@@ -387,17 +517,8 @@ class WindowsPlanDialog(QDialog):
                 day = 29
         else:
             day = 30
-        self.day_sel.addItems(self.get_nums_array(1, day))
+        self.day_sel.addItems(get_nums_array(1, day))
         self.day_sel.setCurrentIndex(0)
-
-    def get_nums_array(self, start, end, bit=2):
-        num_array = []
-        for i in range(start, end + 1):
-            num_str = str(i)
-            if len(num_str) < bit:
-                num_str = "0" * (bit - len(num_str)) + num_str
-            num_array.append(num_str)
-        return num_array
 
     def space_area_hide_all_content(self):
         for i in range(self.space_area.count()):
@@ -408,16 +529,33 @@ class WindowsPlanDialog(QDialog):
 
     def trigger_type_changed(self):
         self.space_area_hide_all_content()
-        if self.trigger_type.currentText() == self.trigger_types[0]:
+        if self.trigger_type.currentText() == self.trigger_types[1]:
             self.calendar_selector.show()
-        elif self.trigger_type.currentText() == self.trigger_types[1]:
+        elif self.trigger_type.currentText() == self.trigger_types[0]:
             self.widget_one_day_selector.show()
+        elif self.trigger_type.currentText() == self.trigger_types[3]:
+            self.widget_weekly_selector.show()
+        elif self.trigger_type.currentText() == self.trigger_types[4]:
+            self.widget_monthly_selector.show()
         else:
-            pass
+            self.widget_daily_selector.show()
+
         self.adjustSize()
 
     def values(self):
-        return self.plan_name_edit.text().strip(), self.trigger_type.text().strip()
+        return {
+            "plan_name": self.plan_name_edit.text().strip(),
+            "trigger_type": self.trigger_type.currentText().strip(),
+            "operation": self.operation.currentText().strip() ,
+            "year": self.year_sel.currentText().strip(),
+            "month": self.month_sel.currentText().strip(),
+            "day": self.day_sel.currentText().strip(),
+            "hour": self.hour_sel.currentText().strip(),
+            "minute": self.minute_sel.currentText().strip(),
+            "calendar": self.calendar_selector.selected_dates,
+            "weekly": self.weekly_day_sel.currentText().strip(),
+            "monthly": self.monthly_day_sel.currentText().strip()
+        }
 
 class MessageBox(QDialog):
     def __init__(self, message, message_name="Message", parent=None):
@@ -449,3 +587,12 @@ class MessageBox(QDialog):
         layout.addStretch()
         layout.addLayout(layout_center_button)
         self.exec_()
+
+def get_nums_array(start, end, bit=2):
+    num_array = []
+    for i in range(start, end + 1):
+        num_str = str(i)
+        if len(num_str) < bit:
+            num_str = "0" * (bit - len(num_str)) + num_str
+        num_array.append(num_str)
+    return num_array

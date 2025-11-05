@@ -3,8 +3,8 @@ import argparse
 
 from PyQt5.QtWidgets import QApplication
 
-from src.ui import ConfigWindow
-from src.clock_manager import run_clock
+from src.ui.ui import ConfigWindow
+from src.core.clock_manager import run_clock
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="auto-clock")

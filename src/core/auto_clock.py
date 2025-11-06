@@ -10,7 +10,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from utils.log import Log
+from src.utils.log import Log
 from src.core.clock import clock
 from src.core.login import login
 from src.core.captcha import captcha, Selectors

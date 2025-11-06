@@ -11,7 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 
-from utils.log import Log
+from src.utils.log import Log
 
 DataRoot = user_data_dir("screenshot", "auto-clock")
 

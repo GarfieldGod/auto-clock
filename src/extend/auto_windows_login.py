@@ -3,7 +3,7 @@ import winreg
 
 from datetime import datetime
 from platformdirs import user_data_dir
-from utils.log import Log
+from src.utils.log import Log
 
 DataRoot = user_data_dir("backup", "auto-clock")
 

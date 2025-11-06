@@ -6,7 +6,7 @@ from threading import Thread
 from dataclasses import dataclass
 from src.core.auto_clock import AutoClock, Config
 
-from utils.log import Log
+from src.utils.log import Log
 
 @dataclass
 class TestConfig:

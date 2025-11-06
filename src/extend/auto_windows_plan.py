@@ -4,20 +4,23 @@ import sys
 import subprocess
 from pathlib import Path
 
-from utils.log import Log
+from src.utils.log import Log
 
 def get_operation(operation_type):
     if operation_type == "Auto Clock":
-        exe_path = get_current_exe_path()
-        exe_path = Path(exe_path).absolute()
-        Log.info(exe_path)
-        if not exe_path.exists():
-            message = f"Error: exe file do not exist: {exe_path}"
-            Log.error(message)
-            raise Exception(message)
-        return exe_path, "--auto"
+        if hasattr(sys, '_MEIPASS'):
+            exe_path = get_current_exe_path()
+            exe_path = Path(exe_path).absolute()
+            Log.info(exe_path)
+            if not exe_path.exists():
+                message = f"Error: exe file do not exist: {exe_path}"
+                Log.error(message)
+                raise Exception(message)
+            return str(exe_path) + " --auto"
+        else:
+            return  f"{Path(__file__).parent.parent / "entry.py"} --auto"
     elif operation_type == "Shut Down Windows":
-        return "shutdown", ""
+        return "shutdown"
     else:
         message = "Unknow operation type!"
         Log.error(message)
@@ -41,15 +44,14 @@ def create_scheduled_task(
     :return: 创建成功返回 True，失败返回 False
     """
     run_as_admin: bool = True
-    exe_path, arguments = get_operation(operation)
+    operation = get_operation(operation)
 
     cmd = [
         "schtasks", "/create",
         "/tn", task_name,
-        "/tr", f'"{exe_path}" {arguments}'.strip(),
+        "/tr", f'"{operation}"'.strip(),
         "/sc", trigger_type,
         "/f", # 强制覆盖同名任务
-        "/z"
     ]
 
     if trigger_type == "ONCE" and day is not None:
@@ -94,7 +96,7 @@ def create_scheduled_task(
             Log.info(f"触发类型：{trigger_type}")
             if trigger_type in ["daily", "weekly"]:
                 Log.info(f"执行时间：{time}")
-            Log.info(f"执行命令：{exe_path} {arguments}")
+            Log.info(f"执行命令：{operation}")
             Log.info(f"管理员权限：{'是' if run_as_admin else '否'}")
             return True
         else:
@@ -111,25 +113,25 @@ def create_scheduled_task(
         Log.error(message)
         raise Exception(message)
 
-def add_trigger(task_name, date, time):
-    add_trigger_cmd = [
-        "schtasks", "/change",
-        "/tn", task_name,
-        "/sc", "once",
-        "/sd", date,
-        "/st", time,
-        "/f"
-    ]
+# def add_trigger(task_name, date, time):
+#     add_trigger_cmd = [
+#         "schtasks", "/change",
+#         "/tn", task_name,
+#         "/sc", "once",
+#         "/sd", date,
+#         "/st", time,
+#         "/f"
+#     ]
+#
+#     result = subprocess.run(add_trigger_cmd, capture_output=True, text=True, encoding="gbk")
+#     if result.returncode == 0:
+#         Log.info(f"成功追加触发器：{date} {time}")
+#         return True
+#     else:
+#         Log.error(f"追加触发器失败（{date} {time}）：{result.stderr}")
+#         raise Exception(f"Append trigger failed:({date} {time}):{result.stderr}")
 
-    result = subprocess.run(add_trigger_cmd, capture_output=True, text=True, encoding="gbk")
-    if result.returncode == 0:
-        Log.info(f"成功追加触发器：{date} {time}")
-        return True
-    else:
-        Log.error(f"追加触发器失败（{date} {time}）：{result.stderr}")
-        raise Exception(f"Append trigger failed:({date} {time}):{result.stderr}")
-
-def delete_scheduled_task(task_name: str) -> bool:
+def delete_scheduled_task(task_name: str):
     """删除计划任务"""
     try:
         result = subprocess.run(
@@ -138,14 +140,15 @@ def delete_scheduled_task(task_name: str) -> bool:
         )
         if "成功" in result.stdout or result.returncode == 0:
             Log.info(f"已删除计划任务：{task_name}")
-            return True
+            return True, None
         else:
-            Log.info(f"Delete task failed: {result.stderr.strip()}")
-            return False
+            message = f"Delete task failed: {result.stderr.strip()}"
+            Log.info(message)
+            return False, message
     except Exception as e:
-        message = (f"Delete task error: {str(e)}")
+        message = f"Delete task error: {str(e)}"
         Log.error(message)
-        raise Exception(message)
+        return False, message
 
 def get_task_day(target_date):
     try:
@@ -184,28 +187,28 @@ def create_task(task):
                 day=task.get("execute_day"),
                 time=task.get("execute_time")
             )
-        if ui_trigger_type == "Multipl":
-            execute_days = task.get("execute_days")
-            if not execute_days: raise Exception("execute_days is empty")
-            first_ok = create_scheduled_task(
-                task_name=task.get("plan_name"),
-                operation=task.get("operation"),
-                trigger_type="ONCE",
-                day=execute_days[0],
-                time=task.get("execute_time")
-            )
-            if not first_ok:
-                delete_scheduled_task(task.get("plan_name"))
-            else:
-                for i in range(1, len(execute_days)):
-                    ret = add_trigger(task_name=task.get("plan_name"),date=execute_days[i],time=task.get("execute_time"))
-                    if not ret: raise Exception("Add trigger failed")
-                ok = True
+        # if ui_trigger_type == "Multipl":
+        #     execute_days = task.get("execute_days")
+        #     if not execute_days: raise Exception("execute_days is empty")
+        #     first_ok = create_scheduled_task(
+        #         task_name=task.get("plan_name"),
+        #         operation=task.get("operation"),
+        #         trigger_type="ONCE",
+        #         day=execute_days[0],
+        #         time=task.get("execute_time")
+        #     )
+        #     if not first_ok:
+        #         delete_scheduled_task(task.get("plan_name"))
+        #     else:
+        #         for i in range(1, len(execute_days)):
+        #             ret = add_trigger(task_name=task.get("plan_name"),date=execute_days[i],time=task.get("execute_time"))
+        #             if not ret: raise Exception("Add trigger failed")
+        #         ok = True
         elif ui_trigger_type == "Daily":
             ok = create_scheduled_task(
                 task_name=task.get("plan_name"),
                 operation=task.get("operation"),
-                trigger_type="daily",
+                trigger_type="Daily",
                 day=None,
                 time=task.get("execute_time")
             )
@@ -214,7 +217,7 @@ def create_task(task):
                 task_name=task.get("plan_name"),
                 operation=task.get("operation"),
                 trigger_type="Weekly",
-                day=task.get("Weekly"),
+                day=task.get("weekly"),
                 time=task.get("execute_time")
             )
         elif ui_trigger_type == "Monthly":

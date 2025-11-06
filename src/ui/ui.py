@@ -1,12 +1,13 @@
 import os
 import json
+import sys
 
-from PyQt5.QtCore import Qt, QDate, QLocale
-from PyQt5.QtGui import QFont, QPalette, QColor
+from PyQt5.QtCore import Qt, QDate, QLocale, QSize
+from PyQt5.QtGui import QFont, QPalette, QColor, QIcon
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDialog, QGroupBox,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QCheckBox,
-    QPushButton, QDialogButtonBox, QSizePolicy, QFormLayout, QComboBox, QSpacerItem
+    QPushButton, QDialogButtonBox, QSizePolicy, QFormLayout, QComboBox, QSpacerItem, QListWidgetItem
 )
 from platformdirs import user_data_dir
 
@@ -30,6 +31,7 @@ class ConfigWindow(QMainWindow):
         # 标题图标和窗口大小
         self.setFixedSize(500, 700)
         self.setWindowTitle("Auto-Clock")
+        self.setWindowIcon(QIcon(get_ico_path()))
         self.setStyleSheet(f"""
             QMainWindow {{
                 background-color: {BackGround_Color};
@@ -109,6 +111,7 @@ class ConfigWindow(QMainWindow):
         self.button_create = QPushButton("Create")
         self.button_create.clicked.connect(self.create_windows_plan)
         self.button_delete = QPushButton("Delete")
+        self.button_delete.clicked.connect(self.delete_windows_plan)
         layout_plan_list_buttons = QHBoxLayout(widget_plan_list_buttons)
         layout_plan_list_buttons.addWidget(self.button_create)
         layout_plan_list_buttons.addWidget(self.button_delete)
@@ -169,9 +172,6 @@ class ConfigWindow(QMainWindow):
         if tolerance_angle is not None:
             data["captcha_tolerance_angle"] = tolerance_angle
 
-        if not os.path.exists(DataRoot):
-            os.makedirs(DataRoot)
-
         try:
             ok = ClockManager.check_data(data)
             if not ok:
@@ -179,8 +179,7 @@ class ConfigWindow(QMainWindow):
         except Exception as e:
             raise Exception(e)
 
-        with open(f"{DataRoot}\\data.json", "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
+        write_file("data.json", data)
 
     def confirm(self):
         try:
@@ -325,6 +324,17 @@ class ConfigWindow(QMainWindow):
                             raise Exception(f"Invalid Date: {execute_day} Early than Today!")
                         task["execute_day"] = execute_day
                         task_name += execute_day
+                    elif trigger_type == "Multipl":
+                        days = value.get("calendar")
+                        execute_days = []
+                        for day in days:
+                            execute_day = str(day.year()) + "-" + str(
+                                get_nums_array(day.month(), day.month(), 2)[0]) + "-" + str(
+                                get_nums_array(day.day(), day.day(), 2)[0])
+                            execute_days.append(execute_day)
+                        task["execute_days"] = execute_days
+                        Log.info(f"execute_days {execute_days}")
+                        task_name += execute_days[0] + "-" + execute_days[len(execute_days)-1]
                     elif trigger_type == "Weekly":
                         task["Weekly"] = value.get("weekly")
                         task_name += value.get("weekly")
@@ -336,13 +346,12 @@ class ConfigWindow(QMainWindow):
                         task["plan_name"] = task_name
                     task["plan_name"] = task["plan_name"].replace(":", "_").replace(" ", "_").replace("-", "_")
                     Log.info(task)
-                    print(task)
                     ok, error = create_task(task)
                     if error:
                         raise Exception(error)
                     else:
                         MessageBox("Create Task Success!")
-
+                self.update_windows_plan(task)
                 Log.info(f"create windows plan task: {task}")
             else:
                 return
@@ -350,10 +359,48 @@ class ConfigWindow(QMainWindow):
             Log.error(str(e))
             MessageBox(str(e))
 
+    def update_windows_plan(self, task):
+        widget_plan_line = QWidget()
+        widget_plan_line.setObjectName(task["plan_name"])
+        layout_plan_line = QHBoxLayout(widget_plan_line)
+        layout_plan_line.setContentsMargins(0, 0, 0, 0)
+        layout_plan_line.setAlignment(Qt.AlignCenter | Qt.AlignLeft)
+        front_size = 8
+        label_alignment = (Qt.AlignCenter | Qt.AlignRight)
+        label_p = create_label(truncate_text(task["plan_name"], 15),size=front_size, fixed_width=140)
+        layout_plan_line.addWidget(label_p)
+        label_o = create_label(truncate_text(task["operation"], 10),size=front_size, alignment=label_alignment, fixed_width=80)
+        layout_plan_line.addWidget(label_o)
+        label_t = create_label(task["trigger_type"], size=front_size, alignment=label_alignment, fixed_width=50)
+        layout_plan_line.addWidget(label_t)
+        label_et = create_label(task["execute_time"],size=front_size, alignment=label_alignment, fixed_width=50)
+        layout_plan_line.addWidget(label_et)
+        if task["trigger_type"] == "Once":
+            layout_plan_line.addWidget(create_label(task["execute_day"],size=front_size, alignment=label_alignment, fixed_width=80))
+        elif task["trigger_type"] == "Weekly":
+            layout_plan_line.addWidget(create_label(task["weekly"],size=front_size, alignment=label_alignment, fixed_width=80))
+        elif task["trigger_type"] == "Monthly":
+            layout_plan_line.addWidget(create_label(task["monthly"],size=front_size, alignment=label_alignment, fixed_width=80))
+        elif task["trigger_type"] == "Multiple":
+            # layout_plan_line.addWidget(create_label(task["plan_name"]))
+            pass
+
+        item = QListWidgetItem()
+        item.setSizeHint(QSize(0, 40))
+        self.widget_plan_list.addItem(item)
+        self.widget_plan_list.setItemWidget(item, widget_plan_line)
+
+    def delete_windows_plan(self):
+        list_item = self.widget_plan_list.currentItem()
+        index = self.widget_plan_list.row(list_item)
+        self.widget_plan_list.takeItem(index)
+        Log.info(f"已删除列表项：索引 {index}")
+
 class WindowsLoginDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Set Windows Auto Login")
+        self.setWindowIcon(QIcon(get_ico_path()))
         self.name_edit = QLineEdit()
         self.password_edit = QLineEdit()
         self.button_clear_auto_login = QPushButton("Clear")
@@ -379,15 +426,6 @@ class WindowsLoginDialog(QDialog):
         except Exception as e:
             MessageBox(f"Clear Failed!\nError: {e}")
 
-def create_label(message, size=11, length=150, family="Arial"):
-    label = QLabel(message)
-    font = QFont()
-    font.setFamily(family)
-    font.setPointSize(size)
-    label.setFont(font)
-    label.setFixedWidth(length)
-    return label
-
 class WindowsPlanDialog(QDialog):
     trigger_types = ["Once", "Multiple", "Daily", "Weekly", "Monthly"]
     operation_types = ["Auto Clock", "Shut Down Windows"]
@@ -397,6 +435,7 @@ class WindowsPlanDialog(QDialog):
         try:
             self.setMinimumWidth(500)
             self.setWindowTitle("Create Windows Plan")
+            self.setWindowIcon(QIcon(get_ico_path()))
             self.plan_name_edit = QLineEdit()
             self.plan_name_edit.setText("Default")
             self.trigger_type = QComboBox()
@@ -561,6 +600,7 @@ class MessageBox(QDialog):
     def __init__(self, message, message_name="Message", parent=None):
         super().__init__(parent)
         self.setWindowTitle(message_name)
+        self.setWindowIcon(QIcon(get_ico_path()))
 
         label = QLabel(message)
         font = QFont()
@@ -588,6 +628,37 @@ class MessageBox(QDialog):
         layout.addLayout(layout_center_button)
         self.exec_()
 
+def write_file(file_name, data):
+    if not os.path.exists(DataRoot):
+        os.makedirs(DataRoot)
+
+    with open(f"{DataRoot}\\{file_name}", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+def get_ico_path():
+    if hasattr(sys, '_MEIPASS'):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, "icon.ico")
+
+def create_label(message, size=11, length=150, family="Arial", width_policy=None, height_policy=None, alignment=None, fixed_width=None, fixed_height=None):
+    label = QLabel(message)
+    font = QFont()
+    font.setFamily(family)
+    font.setPointSize(size)
+    label.setFont(font)
+    label.setFixedWidth(length)
+    if width_policy is not None and height_policy is not None:
+        label.setSizePolicy(width_policy, height_policy)
+    if alignment is not None:
+        label.setAlignment(alignment)
+    if fixed_width is not None:
+        label.setFixedWidth(fixed_width)
+    if fixed_height is not None:
+        label.setFixedHeight(fixed_height)
+    return label
+
 def get_nums_array(start, end, bit=2):
     num_array = []
     for i in range(start, end + 1):
@@ -596,3 +667,8 @@ def get_nums_array(start, end, bit=2):
             num_str = "0" * (bit - len(num_str)) + num_str
         num_array.append(num_str)
     return num_array
+
+def truncate_text(text, max_length=15):
+    if len(text) > max_length:
+        return text[:max_length] + "..."
+    return text

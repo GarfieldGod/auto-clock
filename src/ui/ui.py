@@ -1,21 +1,23 @@
+import copy
 import os
 import json
 import sys
+from datetime import datetime
 
 from PyQt5.QtCore import Qt, QDate, QLocale, QSize
-from PyQt5.QtGui import QFont, QPalette, QColor, QIcon
+from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDialog, QGroupBox,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QCheckBox,
-    QPushButton, QDialogButtonBox, QSizePolicy, QFormLayout, QComboBox, QSpacerItem, QListWidgetItem
+    QPushButton, QDialogButtonBox, QSizePolicy, QFormLayout, QComboBox, QListWidgetItem
 )
 from platformdirs import user_data_dir
 
 from src.core.clock_manager import ClockManager, run_clock, get_driver_path
 from src.extend.auto_windows_login import auto_windows_login_on, auto_windows_login_off
 from src.ui.ui_calendar import Calendar
-from src.extend.auto_windows_plan import create_task
-from utils.log import Log
+from src.extend.auto_windows_plan import create_task, delete_scheduled_task
+from src.utils.log import Log
 
 DataRoot = user_data_dir("data", "auto-clock")
 
@@ -26,6 +28,8 @@ Border_Width = "1px"
 Border_Radius = ""
 
 class ConfigWindow(QMainWindow):
+    task_list = []
+
     def __init__(self):
         super().__init__()
         # 标题图标和窗口大小
@@ -95,14 +99,14 @@ class ConfigWindow(QMainWindow):
         layout_sys.addWidget(self.captcha_failed_email)
         layout_sys.addWidget(widget_retry)
         # Windows Config
-        group_windows_config = QGroupBox("Windows Config")
+        group_windows_config = QGroupBox("Windows Auto Login")
         group_windows_config.setStyleSheet(self.get_group_css({}))
         layout_windows = QVBoxLayout(group_windows_config)
         self.auto_windows_login_on = QPushButton("Set Windows Auto Login")
         self.auto_windows_login_on.clicked.connect(self.auto_login_windows)
         layout_windows.addWidget(self.auto_windows_login_on)
         # Plan List
-        group_plan_list = QGroupBox("Plan List")
+        group_plan_list = QGroupBox("Windows Plan List")
         group_plan_list.setStyleSheet(self.get_group_css({}))
         layout_plan_list = QVBoxLayout(group_plan_list)
         self.widget_plan_list = QListWidget()
@@ -142,8 +146,8 @@ class ConfigWindow(QMainWindow):
         layout_global = QVBoxLayout(widget_global)
         layout_global.addWidget(group_user)
         layout_global.addWidget(group_sys)
-        layout_global.addWidget(group_plan_list)
         layout_global.addWidget(group_windows_config)
+        layout_global.addWidget(group_plan_list)
         layout_global.addWidget(widget_confirm)
         self.setCentralWidget(widget_global)
 # 功能---------------------------------------------------------------------------------------------
@@ -151,6 +155,7 @@ class ConfigWindow(QMainWindow):
         self.button_try.clicked.connect(self.try_now)
 
         self.load()
+        self.update_windows_plan_list()
 
     def write_json(self):
         retry_times = None
@@ -179,7 +184,7 @@ class ConfigWindow(QMainWindow):
         except Exception as e:
             raise Exception(e)
 
-        write_file("data.json", data)
+        write_dict_to_file("data.json", data)
 
     def confirm(self):
         try:
@@ -291,11 +296,16 @@ class ConfigWindow(QMainWindow):
                     "execute_time": execute_time
                 }
 
+                plan_id = datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
+                task["plan_id"] = plan_id
+
                 if trigger_type == "Multiple":
                     days = value.get("calendar")
                     ret = True
                     error_message = ""
+                    tasks = []
                     for day in days:
+                        task["multiple_name"] = plan_name
                         task["plan_name"] = plan_name
                         execute_day = str(day.year()) + "-" + str(get_nums_array(day.month(),day.month(),2)[0]) + "-" + str(get_nums_array(day.day(),day.day(),2)[0])
                         task["execute_day"] = execute_day
@@ -305,7 +315,9 @@ class ConfigWindow(QMainWindow):
                             task["plan_name"] = temp_name + "_" + execute_time
                         else:
                             task["plan_name"] += "_" + execute_day
+                        task["plan_name"] += "_id_" + plan_id
                         task["plan_name"] = task["plan_name"].replace(":", "_").replace(" ", "_").replace("-", "_")
+                        tasks.append(task["plan_name"])
                         Log.info(task)
                         ok, error = create_task(task)
                         if error:
@@ -313,6 +325,7 @@ class ConfigWindow(QMainWindow):
                         if ok is False: ret = False
                     if ret:
                         MessageBox("Create Task Success!")
+                        task["plan_name"] = tasks
                     else:
                         raise Exception(error_message)
                 else:
@@ -323,27 +336,28 @@ class ConfigWindow(QMainWindow):
                         if date < QDate.currentDate():
                             raise Exception(f"Invalid Date: {execute_day} Early than Today!")
                         task["execute_day"] = execute_day
-                        task_name += execute_day
-                    elif trigger_type == "Multipl":
-                        days = value.get("calendar")
-                        execute_days = []
-                        for day in days:
-                            execute_day = str(day.year()) + "-" + str(
-                                get_nums_array(day.month(), day.month(), 2)[0]) + "-" + str(
-                                get_nums_array(day.day(), day.day(), 2)[0])
-                            execute_days.append(execute_day)
-                        task["execute_days"] = execute_days
-                        Log.info(f"execute_days {execute_days}")
-                        task_name += execute_days[0] + "-" + execute_days[len(execute_days)-1]
+                        task_name += "_" + execute_day
+                    # elif trigger_type == "Multipl":
+                    #     days = value.get("calendar")
+                    #     execute_days = []
+                    #     for day in days:
+                    #         execute_day = str(day.year()) + "-" + str(
+                    #             get_nums_array(day.month(), day.month(), 2)[0]) + "-" + str(
+                    #             get_nums_array(day.day(), day.day(), 2)[0])
+                    #         execute_days.append(execute_day)
+                    #     task["execute_days"] = execute_days
+                    #     Log.info(f"execute_days {execute_days}")
+                    #     task_name += execute_days[0] + "-" + execute_days[len(execute_days)-1]
                     elif trigger_type == "Weekly":
-                        task["Weekly"] = value.get("weekly")
-                        task_name += value.get("weekly")
+                        task["weekly"] = value.get("weekly")
+                        task_name += "_" + value.get("weekly")
                     elif trigger_type == "Monthly":
                         task["monthly"] = value.get("monthly")
-                        task_name += value.get("monthly")
+                        task_name += "_" + value.get("monthly")
                     task_name += "_" + execute_time
                     if task.get("plan_name") is None or task.get("plan_name") == "" or task.get("plan_name") == "Default":
                         task["plan_name"] = task_name
+                    task["plan_name"] += "_id_" + plan_id
                     task["plan_name"] = task["plan_name"].replace(":", "_").replace(" ", "_").replace("-", "_")
                     Log.info(task)
                     ok, error = create_task(task)
@@ -351,7 +365,7 @@ class ConfigWindow(QMainWindow):
                         raise Exception(error)
                     else:
                         MessageBox("Create Task Success!")
-                self.update_windows_plan(task)
+                self.add_windows_plan(task)
                 Log.info(f"create windows plan task: {task}")
             else:
                 return
@@ -359,30 +373,56 @@ class ConfigWindow(QMainWindow):
             Log.error(str(e))
             MessageBox(str(e))
 
-    def update_windows_plan(self, task):
+    def update_windows_plan_list(self):
+        try:
+            dict_list = read_dict_from_json("tasks.json")
+            if dict_list is None: return
+
+            self.widget_plan_list.clear()
+            if isinstance(dict_list, list):
+                self.task_list = dict_list
+                for plan_dict in self.task_list:
+                    self.add_windows_plan_ui(plan_dict)
+            elif isinstance(dict_list, dict):
+                self.task_list.append(dict_list)
+                self.add_windows_plan_ui(dict_list)
+            else:
+                raise Exception("Load tasks failed!")
+
+        except Exception as e:
+            message = f"Update windows plan list failed: {e}"
+            Log.error(message)
+            MessageBox(message)
+
+    def add_windows_plan(self, task):
+        self.task_list.append(task)
+        write_dict_to_file("tasks.json", self.task_list)
+        self.update_windows_plan_list()
+
+    def add_windows_plan_ui(self, task):
         widget_plan_line = QWidget()
-        widget_plan_line.setObjectName(task["plan_name"])
+        widget_plan_line.setObjectName(task["plan_id"])
         layout_plan_line = QHBoxLayout(widget_plan_line)
         layout_plan_line.setContentsMargins(0, 0, 0, 0)
         layout_plan_line.setAlignment(Qt.AlignCenter | Qt.AlignLeft)
         front_size = 8
-        label_alignment = (Qt.AlignCenter | Qt.AlignRight)
-        label_p = create_label(truncate_text(task["plan_name"], 15),size=front_size, fixed_width=140)
+        label_alignment = Qt.AlignLeft
+        label_p = create_label(truncate_text(task["plan_name"] if not isinstance(task["plan_name"], list) else task.get("multiple_name", task["plan_name"][0]), 15),size=front_size, fixed_width=140)
         layout_plan_line.addWidget(label_p)
         label_o = create_label(truncate_text(task["operation"], 10),size=front_size, alignment=label_alignment, fixed_width=80)
         layout_plan_line.addWidget(label_o)
         label_t = create_label(task["trigger_type"], size=front_size, alignment=label_alignment, fixed_width=50)
         layout_plan_line.addWidget(label_t)
-        label_et = create_label(task["execute_time"],size=front_size, alignment=label_alignment, fixed_width=50)
+        label_et = create_label(task["execute_time"],size=front_size, alignment=Qt.AlignCenter, fixed_width=50)
         layout_plan_line.addWidget(label_et)
         if task["trigger_type"] == "Once":
-            layout_plan_line.addWidget(create_label(task["execute_day"],size=front_size, alignment=label_alignment, fixed_width=80))
+            layout_plan_line.addWidget(create_label(task["execute_day"],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
         elif task["trigger_type"] == "Weekly":
-            layout_plan_line.addWidget(create_label(task["weekly"],size=front_size, alignment=label_alignment, fixed_width=80))
+            layout_plan_line.addWidget(create_label(task["weekly"],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
         elif task["trigger_type"] == "Monthly":
-            layout_plan_line.addWidget(create_label(task["monthly"],size=front_size, alignment=label_alignment, fixed_width=80))
+            layout_plan_line.addWidget(create_label(task["monthly"],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
         elif task["trigger_type"] == "Multiple":
-            # layout_plan_line.addWidget(create_label(task["plan_name"]))
+            layout_plan_line.addWidget(create_label("[······]",size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
             pass
 
         item = QListWidgetItem()
@@ -391,10 +431,43 @@ class ConfigWindow(QMainWindow):
         self.widget_plan_list.setItemWidget(item, widget_plan_line)
 
     def delete_windows_plan(self):
-        list_item = self.widget_plan_list.currentItem()
-        index = self.widget_plan_list.row(list_item)
-        self.widget_plan_list.takeItem(index)
-        Log.info(f"已删除列表项：索引 {index}")
+        try:
+            selected_item = self.widget_plan_list.currentItem()
+            selected_widget = self.widget_plan_list.itemWidget(selected_item)
+            if not selected_widget:
+                Log.error("选中项未绑定Plan")
+                return
+
+            plan_id = selected_widget.objectName()
+            Log.info(f"删除Plan: {plan_id}")
+
+            delete_task = None
+            for task in self.task_list:
+                if task["plan_id"] == plan_id:
+                    delete_task = task
+                    break
+            if delete_task is None:
+                raise Exception(f"Delete plan failed, no plan id: {plan_id}")
+            plan_name = delete_task["plan_name"]
+
+            dlg = MessageBox(f"\nAre you really want to delete this Plan:\n\n{plan_name}\n", need_check=True, message_only=False, message_name="Delete Plan")
+            if dlg.exec_() != QDialog.Accepted:
+                return
+
+            if delete_task["trigger_type"] == "Multiple":
+                for task_name in plan_name:
+                    ok, error = delete_scheduled_task(task_name)
+                    if not ok: raise Exception(error)
+            else:
+                ok, error = delete_scheduled_task(plan_name)
+                if not ok: raise Exception(error)
+            self.task_list.remove(delete_task)
+            write_dict_to_file("tasks.json", self.task_list)
+            self.update_windows_plan_list()
+
+        except Exception as e:
+            Log.error(e)
+            MessageBox(e)
 
 class WindowsLoginDialog(QDialog):
     def __init__(self, parent=None):
@@ -471,8 +544,10 @@ class WindowsPlanDialog(QDialog):
             self.layout_day_time_selector = QHBoxLayout(self.widget_day_time_selector)
             self.hour_sel = QComboBox()
             self.hour_sel.addItems(get_nums_array(0,23))
+            self.hour_sel.setCurrentIndex(datetime.now().hour)
             self.minute_sel = QComboBox()
             self.minute_sel.addItems(get_nums_array(0,59))
+            self.minute_sel.setCurrentIndex(datetime.now().minute)
             self.layout_day_time_selector.addWidget(create_label("DayTime:"))
             self.layout_day_time_selector.addStretch()
             self.layout_day_time_selector.addWidget(create_label("Hours:", size=10, length=50))
@@ -494,9 +569,11 @@ class WindowsPlanDialog(QDialog):
             self.year_sel.currentIndexChanged.connect(self.year_changed)
             self.month_sel = QComboBox()
             self.month_sel.addItems(get_nums_array(1,12))
+            self.month_sel.setCurrentIndex(datetime.now().month - 1)
             self.month_sel.currentIndexChanged.connect(self.month_changed)
             self.day_sel = QComboBox()
             self.day_sel.addItems(get_nums_array(1, 31))
+            self.day_sel.setCurrentIndex(datetime.now().day - 1)
             self.layout_one_day_selector.addWidget(create_label("Year:", size=10, length=50))
             self.layout_one_day_selector.addWidget(self.year_sel)
             self.layout_one_day_selector.addWidget(create_label("Month:", size=10, length=50))
@@ -510,9 +587,10 @@ class WindowsPlanDialog(QDialog):
             self.layout_weekly_selector = QHBoxLayout(self.widget_weekly_selector)
             self.weekly_day_sel = QComboBox()
             for i in range(1, 8):
-                self.weekly_day_sel.addItem(self.locale.dayName(int(i), QLocale.ShortFormat))
+                self.weekly_day_sel.addItem(self.locale.dayName(int(i), QLocale.LongFormat))
             self.layout_weekly_selector.addWidget(create_label("The Day:"))
             self.layout_weekly_selector.addWidget(self.weekly_day_sel)
+            self.weekly_day_sel.setCurrentIndex(QDate.currentDate().dayOfWeek() - 1)
             # 指定每月
             self.widget_monthly_selector = QWidget()
             self.layout_monthly_selector = QHBoxLayout(self.widget_monthly_selector)
@@ -520,6 +598,7 @@ class WindowsPlanDialog(QDialog):
             self.monthly_day_sel.addItems(get_nums_array(1,31))
             self.layout_monthly_selector.addWidget(create_label("The Day:"))
             self.layout_monthly_selector.addWidget(self.monthly_day_sel)
+            self.monthly_day_sel.setCurrentIndex(datetime.now().day - 1)
 
             # 预留变化区
             self.space_area = QVBoxLayout()
@@ -582,6 +661,8 @@ class WindowsPlanDialog(QDialog):
         self.adjustSize()
 
     def values(self):
+        selected_dates = copy.deepcopy(self.calendar_selector.selected_dates)
+        self.calendar_selector.selected_dates.clear()
         return {
             "plan_name": self.plan_name_edit.text().strip(),
             "trigger_type": self.trigger_type.currentText().strip(),
@@ -591,18 +672,18 @@ class WindowsPlanDialog(QDialog):
             "day": self.day_sel.currentText().strip(),
             "hour": self.hour_sel.currentText().strip(),
             "minute": self.minute_sel.currentText().strip(),
-            "calendar": self.calendar_selector.selected_dates,
-            "weekly": self.weekly_day_sel.currentText().strip(),
+            "calendar": selected_dates,
+            "weekly": self.weekly_day_sel.currentText().strip()[0:3],
             "monthly": self.monthly_day_sel.currentText().strip()
         }
 
 class MessageBox(QDialog):
-    def __init__(self, message, message_name="Message", parent=None):
+    def __init__(self, message, message_name="Message", parent=None, need_check=False, message_only=True):
         super().__init__(parent)
         self.setWindowTitle(message_name)
         self.setWindowIcon(QIcon(get_ico_path()))
 
-        label = QLabel(message)
+        label = QLabel(str(message))
         font = QFont()
         font.setFamily("Consolas")
         font.setPointSize(10)
@@ -615,6 +696,11 @@ class MessageBox(QDialog):
         layout_center_label.addStretch(1)
 
         button = QDialogButtonBox(QDialogButtonBox.Ok)
+        if need_check:
+            button = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+            button.rejected.connect(self.reject)
+        else:
+            button = QDialogButtonBox(QDialogButtonBox.Ok)
         button.accepted.connect(self.accept)
         layout_center_button = QHBoxLayout()
         layout_center_button.addStretch(1)
@@ -626,14 +712,28 @@ class MessageBox(QDialog):
         layout.addLayout(layout_center_label)
         layout.addStretch()
         layout.addLayout(layout_center_button)
-        self.exec_()
+        if message_only:
+            self.exec_()
 
-def write_file(file_name, data):
+def write_dict_to_file(file_name, data):
     if not os.path.exists(DataRoot):
         os.makedirs(DataRoot)
 
     with open(f"{DataRoot}\\{file_name}", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
+
+def read_dict_from_json(file_name):
+    file_path = f"{DataRoot}\\{file_name}"
+
+    if not os.path.exists(file_path):
+        return None
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            dict_list = json.load(f)
+            return dict_list
+    except Exception as e:
+        Log.info(f"Load {file_path} failed. error: {e}")
+        return None
 
 def get_ico_path():
     if hasattr(sys, '_MEIPASS'):

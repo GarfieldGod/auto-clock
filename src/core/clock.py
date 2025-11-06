@@ -5,7 +5,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from utils.log import Log
+from src.utils.log import Log
 
 def clock(driver, sign_in_button_selector = ".kq-btn.pt43.clear a:first-child", wait=2):
     if driver.current_url == "https://kq.neusoft.com/":

@@ -3,7 +3,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from utils.log import Log
+from src.utils.log import Log
 
 def login(driver, user, pwd, wait=2):
     # 定位器

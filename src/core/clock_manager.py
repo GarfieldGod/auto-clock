@@ -5,7 +5,7 @@ import sys
 from platformdirs import user_data_dir
 # sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from utils.log import Log
+from src.utils.log import Log
 from test.test import run_test
 from src.core.auto_clock import AutoClock, Config
 

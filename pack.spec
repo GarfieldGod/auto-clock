@@ -8,6 +8,7 @@ from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
 project_root = r"E:\MyProject\PycharmProjects\auto-clock"
 # 主脚本路径
 main_script = os.path.join(project_root, "entry.py")
+ico = os.path.join(project_root, "icon.ico")
 
 # 依赖的额外文件
 extra_files = []
@@ -53,5 +54,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    # icon=str(project_root / "icon.ico"),
+    icon=ico,
+    uac_admin=True
 )

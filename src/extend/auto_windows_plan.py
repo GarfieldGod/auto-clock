@@ -2,29 +2,42 @@ import ctypes
 import os
 import sys
 import subprocess
+from datetime import datetime
 from pathlib import Path
 
 from src.utils.log import Log
+from src.utils.utils import Utils, tasks_json
+
+
+def get_command_prefix():
+    if hasattr(sys, '_MEIPASS'):
+        exe_path = get_current_exe_path()
+        exe_path = Path(exe_path).absolute()
+        Log.info(exe_path)
+        if not exe_path.exists():
+            message = f"Error: exe file do not exist: {exe_path}"
+            Log.error(message)
+            raise Exception(message)
+        return str(exe_path)
+    else:
+        return f"{Path(__file__).parent.parent / "entry.py"}"
 
 def get_operation(operation_type):
+    prefix = get_command_prefix()
+
+    suffix = " --"
     if operation_type == "Auto Clock":
-        if hasattr(sys, '_MEIPASS'):
-            exe_path = get_current_exe_path()
-            exe_path = Path(exe_path).absolute()
-            Log.info(exe_path)
-            if not exe_path.exists():
-                message = f"Error: exe file do not exist: {exe_path}"
-                Log.error(message)
-                raise Exception(message)
-            return str(exe_path) + " --auto"
-        else:
-            return  f"{Path(__file__).parent.parent / "entry.py"} --auto"
+        suffix += "auto"
     elif operation_type == "Shut Down Windows":
-        return "shutdown"
+        suffix += "shutdown"
+    elif operation_type == "Windows Sleep":
+        suffix += "sleep"
     else:
         message = "Unknow operation type!"
         Log.error(message)
         raise Exception(message)
+
+    return f"{prefix}{suffix}"
 
 def create_scheduled_task(
     task_name: str,
@@ -130,6 +143,57 @@ def create_scheduled_task(
 #     else:
 #         Log.error(f"追加触发器失败（{date} {time}）：{result.stderr}")
 #         raise Exception(f"Append trigger failed:({date} {time}):{result.stderr}")
+
+def delete_invalid_plan(plan_dict):
+    if not isinstance(plan_dict, dict): return False
+    if plan_dict.get("trigger_type") == "Once" and plan_dict.get("execute_day") is not None:
+        execute_day = plan_dict.get("execute_day")
+        execute_date = datetime.strptime(execute_day, "%Y-%m-%d").date()
+        if execute_date < datetime.today().date():
+            plan_name = plan_dict.get("plan_name")
+            Log.info(f"Plan: {plan_name} has been invalid, it will be deleted.")
+            delete_scheduled_task(plan_name)
+            return True
+
+    elif plan_dict.get("trigger_type") == "Multiple":
+        deleted_day = []
+        for execute_day in plan_dict.get("plan_name"):
+            execute_date = datetime.strptime(execute_day, "%Y-%m-%d").date()
+            if execute_date < datetime.today().date():
+                deleted_day.append(execute_day)
+
+        for execute_day in deleted_day:
+            plan_name = plan_dict.get("plan_name")[execute_day]
+            Log.info(f"Plan: {plan_name} has been invalid, it will be deleted.")
+            delete_scheduled_task(plan_name)
+            plan_dict.get("plan_name").pop(execute_day)
+
+        if len(plan_dict.get("plan_name")) == 0:
+            return True
+        else:
+            return False
+
+    return False
+
+def clear_windows_plan():
+    dict_list = Utils.read_dict_from_json(tasks_json)
+    if dict_list is None: return
+
+    if isinstance(dict_list, list):
+        delete_dict = []
+        for plan_dict in dict_list:
+            deleted = delete_invalid_plan(plan_dict)
+            if deleted:
+                delete_dict.append(plan_dict)
+        for deleted in delete_dict:
+            dict_list.remove(deleted)
+    elif isinstance(dict_list, dict):
+        deleted = delete_invalid_plan(dict_list)
+        if deleted:
+            Utils.write_dict_to_file(tasks_json, [])
+            return
+
+    Utils.write_dict_to_file(tasks_json, dict_list)
 
 def delete_scheduled_task(task_name: str):
     """删除计划任务"""

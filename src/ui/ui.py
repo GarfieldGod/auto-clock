@@ -57,6 +57,8 @@ class ConfigWindow(QMainWindow):
         self.captcha_tolerance_angle = QLineEdit()
         self.driver_path = QLineEdit()
         self.always_retry_check_box = QCheckBox()
+        self.send_email_success = QCheckBox()
+        self.send_email_failed = QCheckBox()
         group_user = QGroupBox("Must Config")
         group_user.setStyleSheet(self.get_group_css({"Text_Color":"#D32F2F"}))
         layout_function = QVBoxLayout(group_user)
@@ -94,9 +96,20 @@ class ConfigWindow(QMainWindow):
         layout_retry.addWidget(widget_retry_c)
         layout_retry.addWidget(widget_retry_b)
 
-        layout_sys.addWidget(QLabel("Failure Notification Email:"))
+        layout_sys.addWidget(QLabel("Notification Email:"))
         layout_sys.addWidget(self.captcha_failed_email)
         layout_sys.addWidget(widget_retry)
+
+        widget_send_email = QWidget()
+        layout_send_email = QHBoxLayout(widget_send_email)
+        layout_send_email.addWidget(QLabel("Send Email When:"))
+        layout_send_email.addStretch()
+        layout_send_email.addWidget(QLabel("Failed"))
+        layout_send_email.addWidget(self.send_email_failed)
+        layout_send_email.addWidget(QLabel("Success"))
+        layout_send_email.addWidget(self.send_email_success)
+        layout_send_email.addStretch()
+        layout_sys.addWidget(widget_send_email)
         # Windows Config
         group_windows_config = QGroupBox("Windows Auto Login")
         group_windows_config.setStyleSheet(self.get_group_css({}))
@@ -167,7 +180,9 @@ class ConfigWindow(QMainWindow):
             "user_name": self.user_name.text(),
             "user_password": self.user_password.text(),
             "driver_path": self.driver_path.text(),
-            "always_retry_check_box": self.always_retry_check_box.isChecked()
+            "always_retry_check_box": self.always_retry_check_box.isChecked(),
+            "send_email_failed": self.send_email_failed.isChecked(),
+            "send_email_success": self.send_email_success.isChecked()
         }
         if self.captcha_failed_email.text() != "":
             data["captcha_failed_email"] = self.captcha_failed_email.text()
@@ -207,17 +222,19 @@ class ConfigWindow(QMainWindow):
             if not os.path.exists(data_json):
                 return False
 
-            with open(data_json, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                self.user_name.setText(data.get("user_name", ""))
-                self.user_password.setText(data.get("user_password", ""))
-                self.captcha_retry_times.setText(str(data.get("captcha_retry_times", "")))
-                self.captcha_tolerance_angle.setText(str(data.get("captcha_tolerance_angle", "")))
-                self.always_retry_check_box.setChecked(data.get("always_retry_check_box", False))
-                self.captcha_failed_email.setText(data.get("captcha_failed_email", ""))
-                if inner_driver is None:
-                    self.driver_path.setText(data.get("driver_path", ""))
-                return True
+            data = Utils.read_dict_from_json(data_json)
+
+            self.user_name.setText(data.get("user_name", ""))
+            self.user_password.setText(data.get("user_password", ""))
+            self.captcha_retry_times.setText(str(data.get("captcha_retry_times", "")))
+            self.captcha_tolerance_angle.setText(str(data.get("captcha_tolerance_angle", "")))
+            self.always_retry_check_box.setChecked(data.get("always_retry_check_box", False))
+            self.send_email_failed.setChecked(data.get("send_email_failed", False))
+            self.send_email_success.setChecked(data.get("send_email_success", False))
+            self.captcha_failed_email.setText(data.get("captcha_failed_email", ""))
+            if inner_driver is None:
+                self.driver_path.setText(data.get("driver_path", ""))
+            return True
         except Exception as e:
             MessageBox(f"Load Data Failed!\nError: {e}")
             Log.info(e)

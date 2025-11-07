@@ -5,7 +5,7 @@ from pathlib import Path
 from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
 
 # 项目根目录
-project_root = r"E:\MyProject\PycharmProjects\auto-clock"
+project_root = r"."
 # 主脚本路径
 main_script = os.path.join(project_root, "entry.py")
 ico = os.path.join(project_root, "icon.ico")

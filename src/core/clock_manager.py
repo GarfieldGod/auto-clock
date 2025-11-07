@@ -106,23 +106,21 @@ class ClockManager:
 
         return True
 
-def run_clock():
-    is_test = False
+def run_clock(is_test=False):
     try:
-        Log.open()
-
         if not is_test:
             clock = ClockManager()
             if clock.status:
                 clock.run()
+                return True, None
             else:
                 Log.error(clock.error)
+                return False, clock.error
         else:
             run_test()
-
-        Log.close()
+            return True, None
     except Exception as e:
-        print(e)
+        return False, str(e)
 
 def get_driver_path(driver_name="Edge_Driver/msedgedriver.exe"):
     if hasattr(sys, "_MEIPASS"):

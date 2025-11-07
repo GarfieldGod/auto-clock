@@ -92,9 +92,9 @@ def html_content(subject, message):
     """
     return content
 
-def get_email_message(subject, message, sender_email, receiver_email):
-    msg = MIMEText(html_content(f"{subject}", f"{message}"), _subtype="html", _charset="utf-8")
-    msg["From"] = formataddr(("auto_clock", f"{sender_email}"))
+def get_email_message(subject, title, message, sender_email, receiver_email):
+    msg = MIMEText(html_content(f"{title}", f"{message}"), _subtype="html", _charset="utf-8")
+    msg["From"] = formataddr(("Auto Clock", f"{sender_email}"))
     msg["To"] = Header(f"{receiver_email}", "utf-8")
     msg["Subject"] = Header(f"{subject}", "utf-8")
     return msg
@@ -102,11 +102,11 @@ def get_email_message(subject, message, sender_email, receiver_email):
 def send_email(context):
     if context.get("smtp_server") is None or context.get("smtp_port") is None or context.get(
             "sender_email") is None or context.get("sender_auth_code") is None or context.get(
-            "receiver_email") is None or context.get("message") is None or context.get("subject") is None:
+            "receiver_email") is None or context.get("message") is None or context.get("subject") is None or context.get("title") is None:
         message = "Empty context!"
         return False, message
     try:
-        message = get_email_message(context.get("subject"), context.get("message"), context.get("sender_email"), context.get("receiver_email"))
+        message = get_email_message(context.get("subject"), context.get("title"), context.get("message"), context.get("sender_email"), context.get("receiver_email"))
 
         server = smtplib.SMTP_SSL(context.get("smtp_server"), context.get("smtp_port"))
         server.login(context.get("sender_email"), context.get("sender_auth_code"))
@@ -118,7 +118,7 @@ def send_email(context):
         Log.error(f"HTML Email Send Failed: {str(e)}")
         return False, str(e)
 
-def send_email_by_auto_clock(receiver_email, subject, message):
+def send_email_by_auto_clock(receiver_email, subject, title, message):
     email_info = {
         "smtp_server": "smtp.163.com",
         "smtp_port": 465,
@@ -126,6 +126,7 @@ def send_email_by_auto_clock(receiver_email, subject, message):
         "sender_auth_code": "AXx9tT5cHZKUQXjS",
         "receiver_email": f"{receiver_email}",
         "subject": f"{subject}",
+        "title": f"{title}",
         "message": f"{message}"
     }
     ret, error = send_email(email_info)

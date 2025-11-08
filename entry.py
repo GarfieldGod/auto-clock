@@ -3,14 +3,14 @@ import argparse
 
 from PyQt5.QtWidgets import QApplication
 
-from src.extend.auto_windows_plan import clean_invalid_windows_plan
-from src.extend.email_server import send_email_by_auto_clock
-from src.ui.ui import ConfigWindow
-from src.core.clock_manager import run_clock
-from src.extend.auto_windows_operation import run_windows_shutdown, run_windows_sleep
-from src.utils.const import Key
 from src.utils.log import Log
-from src.utils.utils import Utils, data_json
+from src.utils.utils import Utils
+from src.ui.ui import ConfigWindow
+from src.utils.const import Key, AppPath
+from src.core.clock_manager import run_clock
+from src.extend.email_server import send_email_by_result
+from src.extend.auto_windows_plan import clean_invalid_windows_plan
+from src.extend.auto_windows_operation import run_windows_shutdown, run_windows_sleep
 
 if __name__ == '__main__':
     Log.open()
@@ -29,11 +29,10 @@ if __name__ == '__main__':
         app.exec_()
 
     else:
-        config_data = Utils.read_dict_from_json(data_json)
+        config_data = Utils.read_dict_from_json(AppPath.DataJson)
         send_email_success = False
         send_email_failed = False
         email = None
-        operation = None
         if config_data and config_data.get(Key.NotificationEmail):
             email = config_data.get(Key.NotificationEmail)
             send_email_success = config_data.get(Key.SendEmailWhenSuccess, False)
@@ -45,10 +44,12 @@ if __name__ == '__main__':
         try:
             if args.task_id:
                 task = Utils.find_task(args.task_id)
-                Log.info(f"Auto Clock Get Task: {task}")
-                if task and task.get(Key.Operation):
-                    operation = task.get(Key.Operation)
+                Log.info(f"Auto Clock Get Task Id: {task}")
+                if not task:
+                    raise Exception(f"Task ID: {args.task_id} not found.")
+                operation = task.get(Key.Operation)
 
+                Log.info(f"Task ID: {args.task_id} has found, Task Name: {task.get(Key.TaskName)} Operation: {operation}")
                 if operation == Key.AutoClock:
                     ok, error = run_clock()
                 elif operation == Key.ShutDownWindows:
@@ -57,26 +58,17 @@ if __name__ == '__main__':
                     ok, error = run_windows_sleep()
                 else:
                     error = "No operation specified."
+
+                Log.info("Finish Task.")
+            else:
+                exit()
         except Exception as e:
             error = str(e)
 
         if not error: error = "Unknow Error"
-        if not operation: operation = Key.Unknown
-        if not task: task = {}
-
-        if ok:
-            if send_email_success and email:
-                send_email_by_auto_clock(email, subject="Auto Clock Success", title=f"Task: {operation} Success",
-                                         message=f"Your [{operation}] operation completed successfully.<br>"
-                                                 f"Task Name: {task.get(Key.ShortName, Key.Unknown) if task.get(Key.TriggerType) != Key.Multiple else task.get(Key.ShortName, Key.Unknown)}<br>"
-                                                 f"Trigger Type: {task.get(Key.TriggerType, Key.Unknown)}<br>"
-                                                 f"Execute Time: {task.get(Key.ExecuteTime, Key.Unknown)}<br>")
-        else:
-            if send_email_failed and email:
-                send_email_by_auto_clock(email, subject="Auto Clock Failed", title=f"Task: {operation} Failed",
-                                         message=f"Your [{operation}] operation failed. Error: [{error}]<br>"
-                                                 f"Task Name: {task.get(Key.ShortName, Key.Unknown) if task.get(Key.TriggerType) != Key.Multiple else task.get(Key.ShortName, Key.Unknown)}<br>"
-                                                 f"Trigger Type: {task.get(Key.TriggerType, Key.Unknown)}<br>"
-                                                 f"Execute Time: {task.get(Key.ExecuteTime, Key.Unknown)}<br>")
-
+        Log.info(f"task: {task}")
+        Log.info(f"ok: {ok} error: {error}")
+        Log.info(f"email: {email} send_email_success: {send_email_success} send_email_failed: {send_email_failed}")
+        send_email_by_result(task=task, email=email, send_email_success=send_email_success,
+                             send_email_failed=send_email_failed, ok=ok, error=error)
     Log.close()

@@ -1,39 +1,37 @@
-import copy
 import os
-import json
-import sys
 from datetime import datetime
 
-from PyQt5.QtCore import Qt, QDate, QLocale, QSize
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import Qt, QDate, QSize
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDialog, QGroupBox,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QCheckBox,
-    QPushButton, QDialogButtonBox, QSizePolicy, QFormLayout, QComboBox, QListWidgetItem
+    QPushButton, QSizePolicy, QListWidgetItem
 )
-from platformdirs import user_data_dir
 
-from src.core.clock_manager import ClockManager, run_clock, get_driver_path
-from src.extend.auto_windows_login import auto_windows_login_on, auto_windows_login_off
-from src.ui.ui_calendar import Calendar
-from src.extend.auto_windows_plan import create_task, delete_scheduled_task
-from src.utils.const import Key
 from src.utils.log import Log
-from src.utils.utils import Utils, data_json, tasks_json
+from src.utils.const import Key, AppPath
+from src.ui.ui_message import MessageBox
+from src.ui.ui_windows_plan import WindowsPlanDialog
+from src.ui.ui_windows_login import WindowsLoginDialog
+from src.utils.utils import Utils, QtUI
+from src.extend.auto_windows_login import auto_windows_login_on
+from src.core.clock_manager import ClockManager, run_clock, get_driver_path
+from src.extend.auto_windows_plan import create_task, delete_scheduled_task
 
-BackGround_Color = "#ffffff"
-Border_Color = "#000000"
+
 Text_Color = "grey"
 Border_Width = "1px"
+Border_Color = "#000000"
 Border_Radius = Key.Empty
+BackGround_Color = "#ffffff"
 
 class ConfigWindow(QMainWindow):
     task_list = []
 
     def __init__(self):
         super().__init__()
-        # 标题图标和窗口大小
-        self.setFixedSize(500, 700)
+        self.setFixedSize(500, 800)
         self.setWindowTitle("Auto-Clock")
         self.setWindowIcon(QIcon(Utils.get_ico_path()))
         self.setStyleSheet(f"""
@@ -44,7 +42,6 @@ class ConfigWindow(QMainWindow):
                 background-color: {BackGround_Color};
             }}
         """)
-        # 窗口置中
         screen_geometry = QApplication.desktop().screenGeometry()
         x = (screen_geometry.width() - self.width()) // 2
         y = (screen_geometry.height() - self.height()) // 2
@@ -54,19 +51,26 @@ class ConfigWindow(QMainWindow):
         self.user_name = QLineEdit()
         self.user_password = QLineEdit()
         self.captcha_retry_times = QLineEdit()
-        self.captcha_failed_email = QLineEdit()
+        self.notification_email = QLineEdit()
         self.captcha_tolerance_angle = QLineEdit()
         self.driver_path = QLineEdit()
         self.always_retry_check_box = QCheckBox()
         self.send_email_success = QCheckBox()
         self.send_email_failed = QCheckBox()
-        group_user = QGroupBox("Must Config")
+        # Must Config
+        group_user = QGroupBox("Login Config")
         group_user.setStyleSheet(self.get_group_css({"Text_Color":"#D32F2F"}))
         layout_function = QVBoxLayout(group_user)
-        layout_function.addWidget(QLabel("UserName:"))
-        layout_function.addWidget(self.user_name)
-        layout_function.addWidget(QLabel("Password:"))
-        layout_function.addWidget(self.user_password)
+        layout_username = QVBoxLayout()
+        layout_username.addWidget(QLabel("UserName:"))
+        layout_username.addWidget(self.user_name)
+        layout_password = QVBoxLayout()
+        layout_password.addWidget(QLabel("Password:"))
+        layout_password.addWidget(self.user_password)
+        layout_user = QVBoxLayout()
+        layout_user.addLayout(layout_username)
+        layout_user.addLayout(layout_password)
+        layout_function.addLayout(layout_user)
         layout_function.addWidget(QLabel("edge driver path:"))
         layout_function.addWidget(self.driver_path)
 
@@ -96,33 +100,40 @@ class ConfigWindow(QMainWindow):
         layout_retry.addWidget(widget_retry_a)
         layout_retry.addWidget(widget_retry_c)
         layout_retry.addWidget(widget_retry_b)
-
-        layout_sys.addWidget(QLabel("Notification Email:"))
-        layout_sys.addWidget(self.captcha_failed_email)
         layout_sys.addWidget(widget_retry)
 
-        widget_send_email = QWidget()
-        layout_send_email = QHBoxLayout(widget_send_email)
+        # Notification Config
+        group_notification = QGroupBox("Notification Config")
+        group_notification.setStyleSheet(self.get_group_css({}))
+        layout_notification = QVBoxLayout(group_notification)
+
+        layout_email = QVBoxLayout()
+        layout_email.addWidget(QLabel("Notification Email:"))
+        layout_email.addWidget(self.notification_email)
+
+        layout_send_email = QHBoxLayout()
         layout_send_email.addWidget(QLabel("Send Email When:"))
         layout_send_email.addStretch()
-        layout_send_email.addWidget(QLabel("Failed"))
-        layout_send_email.addWidget(self.send_email_failed)
-        layout_send_email.addWidget(QLabel("Success"))
-        layout_send_email.addWidget(self.send_email_success)
+        layout_send_email_checkbox = QHBoxLayout()
+        layout_send_email_checkbox.addWidget(QLabel("Failed"))
+        layout_send_email_checkbox.addWidget(self.send_email_failed)
+        layout_send_email_checkbox.addWidget(QLabel("Success"))
+        layout_send_email_checkbox.addWidget(self.send_email_success)
+        layout_send_email.addLayout(layout_send_email_checkbox)
         layout_send_email.addStretch()
-        layout_sys.addWidget(widget_send_email)
+        layout_notification.addLayout(layout_email)
+        layout_notification.addLayout(layout_send_email)
+
         # Windows Config
-        group_windows_config = QGroupBox("Windows Auto Login")
-        group_windows_config.setStyleSheet(self.get_group_css({}))
-        layout_windows = QVBoxLayout(group_windows_config)
+        group_windows = QGroupBox("Windows Config")
+        group_windows.setStyleSheet(self.get_group_css({}))
+        layout_plan_list = QVBoxLayout(group_windows)
+
         self.auto_windows_login_on = QPushButton("Set Windows Auto Login")
         self.auto_windows_login_on.clicked.connect(self.auto_login_windows)
-        layout_windows.addWidget(self.auto_windows_login_on)
-        # Plan List
-        group_plan_list = QGroupBox("Windows Plan List")
-        group_plan_list.setStyleSheet(self.get_group_css({}))
-        layout_plan_list = QVBoxLayout(group_plan_list)
+        layout_plan_list.addWidget(self.auto_windows_login_on)
         self.widget_plan_list = QListWidget()
+        layout_plan_list.addWidget(QLabel("Windows Plan List:"))
         layout_plan_list.addWidget(self.widget_plan_list)
         widget_plan_list_buttons = QWidget()
         self.button_create = QPushButton("Create")
@@ -134,7 +145,7 @@ class ConfigWindow(QMainWindow):
         layout_plan_list_buttons.addWidget(self.button_delete)
         layout_plan_list.addWidget(widget_plan_list_buttons)
 
-        # confirm or try
+        # Confirm or Try
         widget_confirm = QWidget()
         widget_confirm.setObjectName("widget_confirm")
         widget_confirm.setFixedHeight(75)
@@ -159,8 +170,8 @@ class ConfigWindow(QMainWindow):
         layout_global = QVBoxLayout(widget_global)
         layout_global.addWidget(group_user)
         layout_global.addWidget(group_sys)
-        layout_global.addWidget(group_windows_config)
-        layout_global.addWidget(group_plan_list)
+        layout_global.addWidget(group_notification)
+        layout_global.addWidget(group_windows)
         layout_global.addWidget(widget_confirm)
         self.setCentralWidget(widget_global)
 # 功能---------------------------------------------------------------------------------------------
@@ -185,8 +196,8 @@ class ConfigWindow(QMainWindow):
             Key.SendEmailWhenFailed: self.send_email_failed.isChecked(),
             Key.SendEmailWhenSuccess: self.send_email_success.isChecked()
         }
-        if self.captcha_failed_email.text() != Key.Empty:
-            data[Key.NotificationEmail] = self.captcha_failed_email.text()
+        if self.notification_email.text() != Key.Empty:
+            data[Key.NotificationEmail] = self.notification_email.text()
         if retry_times is not None:
             data[Key.CaptchaRetryTimes] = retry_times
         if tolerance_angle is not None:
@@ -199,7 +210,7 @@ class ConfigWindow(QMainWindow):
         except Exception as e:
             raise Exception(e)
 
-        Utils.write_dict_to_file(data_json, data)
+        Utils.write_dict_to_file(AppPath.DataJson, data)
 
     def confirm(self):
         try:
@@ -220,10 +231,10 @@ class ConfigWindow(QMainWindow):
                 self.driver_path.setText(inner_driver)
                 self.driver_path.setEnabled(False)
 
-            if not os.path.exists(data_json):
+            if not os.path.exists(AppPath.DataJson):
                 return False
 
-            data = Utils.read_dict_from_json(data_json)
+            data = Utils.read_dict_from_json(AppPath.DataJson)
 
             self.user_name.setText(data.get(Key.UserName, Key.Empty))
             self.user_password.setText(data.get(Key.UserPassword, Key.Empty))
@@ -232,7 +243,7 @@ class ConfigWindow(QMainWindow):
             self.always_retry_check_box.setChecked(data.get(Key.AlwaysRetry, False))
             self.send_email_failed.setChecked(data.get(Key.SendEmailWhenFailed, False))
             self.send_email_success.setChecked(data.get(Key.SendEmailWhenSuccess, False))
-            self.captcha_failed_email.setText(data.get(Key.NotificationEmail, Key.Empty))
+            self.notification_email.setText(data.get(Key.NotificationEmail, Key.Empty))
             if inner_driver is None:
                 self.driver_path.setText(data.get(Key.DriverPath, Key.Empty))
             return True
@@ -297,50 +308,38 @@ class ConfigWindow(QMainWindow):
                 value = plan_ui.values()
                 Log.info(f"create windows plan value: {value}")
                 plan_name = value.get(Key.WindowsPlanName)
-                trigger_type = value.get(Key.TriggerType)
                 operation = value.get(Key.Operation)
+                trigger_type = value.get(Key.TriggerType)
+                execute_time = value.get(Key.Hour) + ":" + value.get(Key.Minute)
                 if not value or not trigger_type or not operation:
                     return
 
-                execute_time = value.get(Key.Hour) + ":" + value.get(Key.Minute)
-                task_name = operation + "_Type_" + trigger_type
+                task_id = datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
+                is_no_name = plan_name is None or plan_name == Key.Empty or plan_name == Key.DefaultWindowsPlanName
                 task = {
-                    Key.ShortName: task_name if not plan_name else plan_name,
+                    Key.TaskName: Key.DefaultWindowsPlanName if is_no_name else plan_name,
+                    Key.TaskID: task_id,
                     Key.Operation: operation,
                     Key.TriggerType: trigger_type,
                     Key.ExecuteTime: execute_time
                 }
 
-                plan_id = datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
-                task[Key.TaskID] = plan_id
-
                 if trigger_type == Key.Multiple:
-                    days = value.get(Key.Calendar)
-                    ret = True
-                    error_message = Key.Empty
-                    tasks = {}
-                    for day in days:
-                        task[Key.MultipleName] = plan_name
-                        task[Key.WindowsPlanName] = plan_name
-                        execute_day = str(day.year()) + "-" + str(Utils.get_nums_array(day.month(),day.month(),2)[0]) + "-" + str(Utils.get_nums_array(day.day(),day.day(),2)[0])
+                    multiple_tasks = {}
+                    execute_days = value.get(Key.ExecuteDays)
+                    ret, error_message = True, Key.Empty
+                    for execute_day in execute_days:
                         task[Key.ExecuteDay] = execute_day
-                        temp_name = task_name
-                        temp_name += execute_day
-                        if task.get(Key.WindowsPlanName) is None or task.get(Key.WindowsPlanName) == Key.Empty or task.get(Key.WindowsPlanName) == Key.DefaultWindowsPlanName:
-                            task[Key.WindowsPlanName] = temp_name + "_" + execute_time
-                        else:
-                            task[Key.WindowsPlanName] += "_" + execute_day
-                        task[Key.WindowsPlanName] += "_id_" + plan_id
+                        task[Key.WindowsPlanName] = task[Key.TaskName] + "_Type_" + trigger_type + "_Date_" + execute_day + "_Time_" + execute_time + "_Id_" + task_id
                         task[Key.WindowsPlanName] = task[Key.WindowsPlanName].replace(":", "_").replace(" ", "_").replace("-", "_")
-                        tasks[execute_day] = task[Key.WindowsPlanName]
-                        Log.info(task)
                         ok, error = create_task(task)
+                        multiple_tasks[execute_day] = task[Key.WindowsPlanName]
                         if error:
                             error_message += str(error) + "\n"
                         if ok is False: ret = False
                     if ret:
-                        MessageBox("Create Task Success!")
-                        task[Key.WindowsPlanName] = tasks
+                        MessageBox(f"Create Task: {task[Key.TaskName]} Success!")
+                        task[Key.WindowsPlanName] = multiple_tasks
                         task.pop(Key.ExecuteDay)
                     else:
                         raise Exception(error_message)
@@ -352,35 +351,30 @@ class ConfigWindow(QMainWindow):
                         if date < QDate.currentDate():
                             raise Exception(f"Invalid Date: {execute_day} Early than Today!")
                         task[Key.ExecuteDay] = execute_day
-                        task_name += "_" + execute_day
+                    elif trigger_type == Key.Daily:
+                        pass
                     elif trigger_type == Key.Weekly:
-                        task[Key.Weekly] = value.get(Key.Weekly)
-                        task_name += "_" + value.get(Key.Weekly)
+                        task[Key.ExecuteDay] = value.get(Key.Weekly)
                     elif trigger_type == Key.Monthly:
-                        task[Key.Monthly] = value.get(Key.Monthly)
-                        task_name += "_" + value.get(Key.Monthly)
-                    task_name += "_" + execute_time
-                    if task.get(Key.WindowsPlanName) is None or task.get(Key.WindowsPlanName) == Key.Empty or task.get(Key.WindowsPlanName) == Key.DefaultWindowsPlanName:
-                        task[Key.WindowsPlanName] = task_name
-                    task[Key.WindowsPlanName] += "_id_" + plan_id
+                        task[Key.ExecuteDay] = value.get(Key.Monthly)
+                    else:
+                        return
+                    task[Key.WindowsPlanName] = task[Key.TaskName] + "_Type_" + trigger_type + "_Date_" + task[Key.ExecuteDay] + "_Time_" + execute_time + "_Id_" + task_id
                     task[Key.WindowsPlanName] = task[Key.WindowsPlanName].replace(":", "_").replace(" ", "_").replace("-", "_")
-                    Log.info(task)
                     ok, error = create_task(task)
                     if error:
                         raise Exception(error)
                     else:
-                        MessageBox("Create Task Success!")
+                        MessageBox(f"Create Task: {task[Key.TaskName]} Success!")
                 self.add_windows_plan(task)
                 Log.info(f"create windows plan task: {task}")
-            else:
-                return
         except Exception as e:
             Log.error(str(e))
             MessageBox(str(e))
 
     def update_windows_plan_list(self):
         try:
-            dict_list = Utils.read_dict_from_json(tasks_json)
+            dict_list = Utils.read_dict_from_json(AppPath.TasksJson)
             if dict_list is None: return
 
             self.widget_plan_list.clear()
@@ -401,7 +395,7 @@ class ConfigWindow(QMainWindow):
 
     def add_windows_plan(self, task):
         self.task_list.append(task)
-        Utils.write_dict_to_file(tasks_json, self.task_list)
+        Utils.write_dict_to_file(AppPath.TasksJson, self.task_list)
         self.update_windows_plan_list()
 
     def add_windows_plan_ui(self, task):
@@ -412,22 +406,22 @@ class ConfigWindow(QMainWindow):
         layout_plan_line.setAlignment(Qt.AlignCenter | Qt.AlignLeft)
         front_size = 8
         label_alignment = Qt.AlignLeft
-        label_p = create_label(Utils.truncate_text(task[Key.WindowsPlanName] if not isinstance(task[Key.WindowsPlanName], dict) else task.get(Key.MultipleName, Key.Empty), 15),size=front_size, fixed_width=140)
+        label_p = QtUI.create_label(Utils.truncate_text(task[Key.TaskName], 15),size=front_size, fixed_width=140)
         layout_plan_line.addWidget(label_p)
-        label_o = create_label(Utils.truncate_text(task[Key.Operation], 10),size=front_size, alignment=label_alignment, fixed_width=80)
+        label_o = QtUI.create_label(Utils.truncate_text(task[Key.Operation], 10),size=front_size, alignment=label_alignment, fixed_width=80)
         layout_plan_line.addWidget(label_o)
-        label_t = create_label(task[Key.TriggerType], size=front_size, alignment=label_alignment, fixed_width=50)
+        label_t = QtUI.create_label(task[Key.TriggerType], size=front_size, alignment=label_alignment, fixed_width=50)
         layout_plan_line.addWidget(label_t)
-        label_et = create_label(task[Key.ExecuteTime],size=front_size, alignment=Qt.AlignCenter, fixed_width=50)
+        label_et = QtUI.create_label(task[Key.ExecuteTime],size=front_size, alignment=Qt.AlignCenter, fixed_width=50)
         layout_plan_line.addWidget(label_et)
         if task[Key.TriggerType] == Key.Once:
-            layout_plan_line.addWidget(create_label(task[Key.ExecuteDay],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
+            layout_plan_line.addWidget(QtUI.create_label(task[Key.ExecuteDay],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
         elif task[Key.TriggerType] == Key.Weekly:
-            layout_plan_line.addWidget(create_label(task[Key.Weekly],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
+            layout_plan_line.addWidget(QtUI.create_label(task[Key.ExecuteDay],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
         elif task[Key.TriggerType] == Key.Monthly:
-            layout_plan_line.addWidget(create_label(task[Key.Monthly],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
+            layout_plan_line.addWidget(QtUI.create_label(task[Key.ExecuteDay],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
         elif task[Key.TriggerType] == Key.Multiple:
-            layout_plan_line.addWidget(create_label("[······]",size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
+            layout_plan_line.addWidget(QtUI.create_label("[······]",size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
             pass
 
         item = QListWidgetItem()
@@ -453,7 +447,7 @@ class ConfigWindow(QMainWindow):
                     break
             if delete_task is None:
                 raise Exception(f"Delete plan failed, no plan id: {plan_id}")
-            short_name = delete_task[Key.ShortName]
+            short_name = delete_task[Key.TaskName]
             plan_name = delete_task[Key.WindowsPlanName]
 
             dlg = MessageBox(f"\nAre you really want to delete this Plan:\n\n{short_name}\n", need_check=True, message_only=False, message_name="Delete Plan")
@@ -468,272 +462,9 @@ class ConfigWindow(QMainWindow):
                 ok, error = delete_scheduled_task(plan_name)
                 if not ok: raise Exception(error)
             self.task_list.remove(delete_task)
-            Utils.write_dict_to_file(tasks_json, self.task_list)
+            Utils.write_dict_to_file(AppPath.TasksJson, self.task_list)
             self.update_windows_plan_list()
 
         except Exception as e:
             Log.error(e)
             MessageBox(e)
-
-class WindowsLoginDialog(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Set Windows Auto Login")
-        self.setWindowIcon(QIcon(Utils.get_ico_path()))
-        self.name_edit = QLineEdit()
-        self.password_edit = QLineEdit()
-        self.button_clear_auto_login = QPushButton("Clear")
-        self.button_clear_auto_login.clicked.connect(self.clear_auto_login)
-
-        form = QFormLayout(self)
-        form.addRow("Windows User Name:", self.name_edit)
-        form.addRow("Windows User Password:", self.password_edit)
-        form.addRow("Clear Auto Login:", self.button_clear_auto_login)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        form.addRow(buttons)
-
-    def values(self):
-        return self.name_edit.text().strip(), self.password_edit.text().strip()
-
-    def clear_auto_login(self):
-        try:
-            backup_path = auto_windows_login_off()
-            MessageBox(f"Clear Success!\nbackup before clear: {backup_path}")
-        except Exception as e:
-            MessageBox(f"Clear Failed!\nError: {e}")
-
-class WindowsPlanDialog(QDialog):
-    trigger_types = [Key.Once, Key.Multiple, Key.Daily, Key.Weekly, Key.Monthly]
-    operation_types = [Key.AutoClock, Key.ShutDownWindows]
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        try:
-            self.setMinimumWidth(500)
-            self.setWindowTitle("Create Windows Plan")
-            self.setWindowIcon(QIcon(Utils.get_ico_path()))
-            self.plan_name_edit = QLineEdit()
-            self.plan_name_edit.setText(Key.DefaultWindowsPlanName)
-            self.trigger_type = QComboBox()
-            self.trigger_type.addItems(self.trigger_types)
-            self.trigger_type.currentTextChanged.connect(self.trigger_type_changed)
-            self.operation = QComboBox()
-            self.operation.addItems(self.operation_types)
-            self.locale = QLocale(QLocale.English)
-
-            widget_layout = QVBoxLayout(self)
-
-            # 常规设置
-            widget_setting = QWidget()
-            layout_setting = QVBoxLayout(widget_setting)
-            widget_line_1 = QHBoxLayout()
-            # 选择Plan Name
-            widget_line_1.addWidget(create_label("Plan Name:"))
-            widget_line_1.addWidget(self.plan_name_edit)
-            widget_line_2 = QHBoxLayout()
-            # 选择Trigger Type
-            widget_line_2.addWidget(create_label("Trigger Type:"))
-            widget_line_2.addWidget(self.trigger_type)
-            # 选择Operation
-            widget_line_3 = QHBoxLayout()
-            widget_line_3.addWidget(create_label("Operation:"))
-            widget_line_3.addWidget(self.operation)
-            layout_setting.addLayout(widget_line_1)
-            layout_setting.addLayout(widget_line_2)
-            layout_setting.addLayout(widget_line_3)
-            widget_layout.addWidget(widget_setting)
-            # 选择DayTime
-            self.widget_day_time_selector = QWidget()
-            self.layout_day_time_selector = QHBoxLayout(self.widget_day_time_selector)
-            self.hour_sel = QComboBox()
-            self.hour_sel.addItems(Utils.get_nums_array(0,23))
-            self.hour_sel.setCurrentIndex(datetime.now().hour)
-            self.minute_sel = QComboBox()
-            self.minute_sel.addItems(Utils.get_nums_array(0,59))
-            self.minute_sel.setCurrentIndex(datetime.now().minute)
-            self.layout_day_time_selector.addWidget(create_label("DayTime:"))
-            self.layout_day_time_selector.addStretch()
-            self.layout_day_time_selector.addWidget(create_label("Hours:", size=10, length=50))
-            self.layout_day_time_selector.addWidget(self.hour_sel)
-            self.layout_day_time_selector.addWidget(create_label("Minute:", size=10, length=50))
-            self.layout_day_time_selector.addWidget(self.minute_sel)
-            widget_layout.addWidget(self.widget_day_time_selector)
-
-            widget_layout.addStretch()
-
-            # 批量选择
-            self.calendar_selector = Calendar()
-
-            # 指定日
-            self.widget_one_day_selector = QWidget()
-            self.layout_one_day_selector = QHBoxLayout(self.widget_one_day_selector)
-            self.year_sel = QComboBox()
-            self.year_sel.addItems([str(QDate.currentDate().year()), str(QDate.currentDate().addYears(1).year())])
-            self.year_sel.currentIndexChanged.connect(self.year_changed)
-            self.month_sel = QComboBox()
-            self.month_sel.addItems(Utils.get_nums_array(1,12))
-            self.month_sel.setCurrentIndex(datetime.now().month - 1)
-            self.month_sel.currentIndexChanged.connect(self.month_changed)
-            self.day_sel = QComboBox()
-            self.day_sel.addItems(Utils.get_nums_array(1, 31))
-            self.day_sel.setCurrentIndex(datetime.now().day - 1)
-            self.layout_one_day_selector.addWidget(create_label("Year:", size=10, length=50))
-            self.layout_one_day_selector.addWidget(self.year_sel)
-            self.layout_one_day_selector.addWidget(create_label("Month:", size=10, length=50))
-            self.layout_one_day_selector.addWidget(self.month_sel)
-            self.layout_one_day_selector.addWidget(create_label("Day:", size=10, length=50))
-            self.layout_one_day_selector.addWidget(self.day_sel)
-            # 每日
-            self.widget_daily_selector = QWidget()
-            # 指定每周
-            self.widget_weekly_selector = QWidget()
-            self.layout_weekly_selector = QHBoxLayout(self.widget_weekly_selector)
-            self.weekly_day_sel = QComboBox()
-            for i in range(1, 8):
-                self.weekly_day_sel.addItem(self.locale.dayName(int(i), QLocale.LongFormat))
-            self.layout_weekly_selector.addWidget(create_label("The Day:"))
-            self.layout_weekly_selector.addWidget(self.weekly_day_sel)
-            self.weekly_day_sel.setCurrentIndex(QDate.currentDate().dayOfWeek() - 1)
-            # 指定每月
-            self.widget_monthly_selector = QWidget()
-            self.layout_monthly_selector = QHBoxLayout(self.widget_monthly_selector)
-            self.monthly_day_sel = QComboBox()
-            self.monthly_day_sel.addItems(Utils.get_nums_array(1,31))
-            self.layout_monthly_selector.addWidget(create_label("The Day:"))
-            self.layout_monthly_selector.addWidget(self.monthly_day_sel)
-            self.monthly_day_sel.setCurrentIndex(datetime.now().day - 1)
-
-            # 预留变化区
-            self.space_area = QVBoxLayout()
-            self.space_area.addWidget(self.widget_one_day_selector)
-            self.space_area.addWidget(self.calendar_selector)
-            self.space_area.addWidget(self.widget_daily_selector)
-            self.space_area.addWidget(self.widget_weekly_selector)
-            self.space_area.addWidget(self.widget_monthly_selector)
-            widget_layout.addLayout(self.space_area)
-            self.space_area_hide_all_content()
-            self.widget_one_day_selector.show()
-
-            # 按键
-            buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-            buttons.accepted.connect(self.accept)
-            buttons.rejected.connect(self.reject)
-            widget_layout.addWidget(buttons)
-        except Exception as e:
-            Log.error(e)
-            MessageBox(e)
-
-    def year_changed(self):
-        self.month_sel.setCurrentIndex(0)
-        self.day_sel.setCurrentIndex(0)
-
-    def month_changed(self):
-        self.day_sel.clear()
-        if self.month_sel.currentText() in ["01", "03", "05", "07", "08", "10", "12"]:
-            day = 31
-        elif self.month_sel.currentText() == "02":
-            if QDate.isLeapYear(int(self.year_sel.currentText())):
-                day = 28
-            else:
-                day = 29
-        else:
-            day = 30
-        self.day_sel.addItems(Utils.get_nums_array(1, day))
-        self.day_sel.setCurrentIndex(0)
-
-    def space_area_hide_all_content(self):
-        for i in range(self.space_area.count()):
-            item = self.space_area.itemAt(i)
-            widget = item.widget()
-            if widget is not None:
-                widget.hide()
-
-    def trigger_type_changed(self):
-        self.space_area_hide_all_content()
-        if self.trigger_type.currentText() == self.trigger_types[1]:
-            self.calendar_selector.show()
-        elif self.trigger_type.currentText() == self.trigger_types[0]:
-            self.widget_one_day_selector.show()
-        elif self.trigger_type.currentText() == self.trigger_types[3]:
-            self.widget_weekly_selector.show()
-        elif self.trigger_type.currentText() == self.trigger_types[4]:
-            self.widget_monthly_selector.show()
-        else:
-            self.widget_daily_selector.show()
-
-        self.adjustSize()
-
-    def values(self):
-        selected_dates = copy.deepcopy(self.calendar_selector.selected_dates)
-        self.calendar_selector.selected_dates.clear()
-        return {
-            Key.WindowsPlanName: self.plan_name_edit.text().strip(),
-            Key.TriggerType: self.trigger_type.currentText().strip(),
-            Key.Operation: self.operation.currentText().strip() ,
-            Key.Year: self.year_sel.currentText().strip(),
-            Key.Month: self.month_sel.currentText().strip(),
-            Key.Day: self.day_sel.currentText().strip(),
-            Key.Hour: self.hour_sel.currentText().strip(),
-            Key.Minute: self.minute_sel.currentText().strip(),
-            Key.Calendar: selected_dates,
-            Key.Weekly: self.weekly_day_sel.currentText().strip()[0:3],
-            Key.Monthly: self.monthly_day_sel.currentText().strip()
-        }
-
-class MessageBox(QDialog):
-    def __init__(self, message, message_name="Message", parent=None, need_check=False, message_only=True):
-        super().__init__(parent)
-        self.setWindowTitle(message_name)
-        self.setWindowIcon(QIcon(Utils.get_ico_path()))
-
-        label = QLabel(str(message))
-        font = QFont()
-        font.setFamily("Consolas")
-        font.setPointSize(10)
-        label.setFont(font)
-        label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-
-        layout_center_label = QHBoxLayout()
-        layout_center_label.addStretch(1)
-        layout_center_label.addWidget(label)
-        layout_center_label.addStretch(1)
-
-        button = QDialogButtonBox(QDialogButtonBox.Ok)
-        if need_check:
-            button = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-            button.rejected.connect(self.reject)
-        else:
-            button = QDialogButtonBox(QDialogButtonBox.Ok)
-        button.accepted.connect(self.accept)
-        layout_center_button = QHBoxLayout()
-        layout_center_button.addStretch(1)
-        layout_center_button.addWidget(button)
-        layout_center_button.addStretch(1)
-
-        layout = QVBoxLayout(self)
-        layout.addStretch()
-        layout.addLayout(layout_center_label)
-        layout.addStretch()
-        layout.addLayout(layout_center_button)
-        if message_only:
-            self.exec_()
-
-def create_label(message, size=11, length=150, family="Arial", width_policy=None, height_policy=None, alignment=None, fixed_width=None, fixed_height=None):
-    label = QLabel(message)
-    font = QFont()
-    font.setFamily(family)
-    font.setPointSize(size)
-    label.setFont(font)
-    label.setFixedWidth(length)
-    if width_policy is not None and height_policy is not None:
-        label.setSizePolicy(width_policy, height_policy)
-    if alignment is not None:
-        label.setAlignment(alignment)
-    if fixed_width is not None:
-        label.setFixedWidth(fixed_width)
-    if fixed_height is not None:
-        label.setFixedHeight(fixed_height)
-    return label

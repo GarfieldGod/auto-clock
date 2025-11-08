@@ -2,25 +2,20 @@ import os
 import json
 import sys
 
-from platformdirs import user_data_dir
-# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 from src.utils.log import Log
 from test.test import run_test
+from src.utils.const import Key, AppPath
 from src.core.auto_clock import AutoClock, Config
-from src.utils.const import Key
-
-DataRoot = user_data_dir("data", "auto-clock")
 
 class ClockManager:
     def __init__(self):
         try:
-            if not os.path.exists(f"{DataRoot}\\data.json"):
+            if not os.path.exists(f"{AppPath.DataJson}"):
                 self.status = False
-                self.error = f"{DataRoot}\\data.json does not exist."
+                self.error = f"{AppPath.DataJson} does not exist."
                 return
 
-            with open(f"{DataRoot}\\data.json", "r", encoding="utf-8") as f:
+            with open(f"{AppPath.DataJson}", "r", encoding="utf-8") as f:
                 data = json.load(f)
                 ok = ClockManager.check_data(data)
                 if not ok:

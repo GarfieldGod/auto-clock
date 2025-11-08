@@ -2,10 +2,8 @@ import os
 import winreg
 
 from datetime import datetime
-from platformdirs import user_data_dir
 from src.utils.log import Log
-
-DataRoot = user_data_dir("backup", "auto-clock")
+from src.utils.const import AppPath
 
 def throw_exception(message):
     Log.error(message)
@@ -30,7 +28,7 @@ def set_auto_login(username=None, password=None, enabled=False):
     :param enabled: 开启或关闭自动登录
     """
     reg_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
-    backup_file = os.path.join(DataRoot, f"windows_logon_backup_{datetime.now().strftime("%Y-%m-%d_%H_%M_%S.%f")}.reg")
+    backup_file = os.path.join(AppPath.BackupRoot, f"windows_logon_backup_{datetime.now().strftime("%Y-%m-%d_%H_%M_%S.%f")}.reg")
 
     if not backup_registry_key(f"HKEY_LOCAL_MACHINE\\{reg_path}", backup_file):
         throw_exception("Backup failed, canceling automatic login configuration.")

@@ -1,13 +1,12 @@
-import ctypes
-import os
 import sys
+import ctypes
 import subprocess
-from datetime import datetime
 from pathlib import Path
+from datetime import datetime
 
 from src.utils.log import Log
-from src.utils.utils import Utils, tasks_json
-from src.utils.const import Key
+from src.utils.utils import Utils
+from src.utils.const import Key, AppPath
 
 
 def get_execute_file_prefix():
@@ -30,9 +29,9 @@ def get_operation(task_id):
 def create_scheduled_task(
     task_name: str,
     task_id: str,
-    trigger_type: str,  # 触发类型：daily=每天，onlogon=登录后，weekly=每周
+    trigger_type: str,
     day: str = None,
-    time: str = None,          # 仅 trigger_type=daily/weekly 有效，格式 HH:MM
+    time: str = None,
 ) -> bool:
     """
     创建 Windows 计划任务，自动定时运行 exe
@@ -114,24 +113,6 @@ def create_scheduled_task(
         Log.error(message)
         raise Exception(message)
 
-# def add_trigger(task_name, date, time):
-#     add_trigger_cmd = [
-#         "schtasks", "/change",
-#         "/tn", task_name,
-#         "/sc", Key.Once,
-#         "/sd", date,
-#         "/st", time,
-#         "/f"
-#     ]
-#
-#     result = subprocess.run(add_trigger_cmd, capture_output=True, text=True, encoding="gbk")
-#     if result.returncode == 0:
-#         Log.info(f"成功追加触发器：{date} {time}")
-#         return True
-#     else:
-#         Log.error(f"追加触发器失败（{date} {time}）：{result.stderr}")
-#         raise Exception(f"Append trigger failed:({date} {time}):{result.stderr}")
-
 def delete_invalid_plan(plan_dict):
     if not isinstance(plan_dict, dict): return False
     if plan_dict.get(Key.TriggerType) == Key.Once and plan_dict.get(Key.ExecuteDay) is not None:
@@ -164,7 +145,7 @@ def delete_invalid_plan(plan_dict):
     return False
 
 def clean_invalid_windows_plan():
-    dict_list = Utils.read_dict_from_json(tasks_json)
+    dict_list = Utils.read_dict_from_json(AppPath.TasksJson)
     if dict_list is None: return
 
     if isinstance(dict_list, list):
@@ -178,10 +159,10 @@ def clean_invalid_windows_plan():
     elif isinstance(dict_list, dict):
         deleted = delete_invalid_plan(dict_list)
         if deleted:
-            Utils.write_dict_to_file(tasks_json, [])
+            Utils.write_dict_to_file(AppPath.TasksJson, [])
             return
 
-    Utils.write_dict_to_file(tasks_json, dict_list)
+    Utils.write_dict_to_file(AppPath.TasksJson, dict_list)
 
 def delete_scheduled_task(task_name: str):
     """删除计划任务"""
@@ -220,6 +201,7 @@ def get_current_exe_path():
     return exe_path
 
 def create_task(task):
+    Log.info(f"Create Windows Scheduled Task: {task}")
     try:
         if not ctypes.windll.shell32.IsUserAnAdmin():
             message = "No permission! Please run as an administrator!"
@@ -239,23 +221,6 @@ def create_task(task):
                 day=task.get(Key.ExecuteDay),
                 time=task.get(Key.ExecuteTime)
             )
-        # if ui_trigger_type == "Multipl":
-        #     execute_days = task.get("execute_days")
-        #     if not execute_days: raise Exception("execute_days is empty")
-        #     first_ok = create_scheduled_task(
-        #         task_name=task.get(Key.WindowsPlanName),
-        #         operation=task.get(Key.Operation),
-        #         trigger_type=Key.Once,
-        #         day=execute_days[0],
-        #         time=task.get(Key.ExecuteTime)
-        #     )
-        #     if not first_ok:
-        #         delete_scheduled_task(task.get(Key.WindowsPlanName))
-        #     else:
-        #         for i in range(1, len(execute_days)):
-        #             ret = add_trigger(task_name=task.get(Key.WindowsPlanName),date=execute_days[i],time=task.get(Key.ExecuteTime))
-        #             if not ret: raise Exception("Add trigger failed")
-        #         ok = True
         elif ui_trigger_type == Key.Daily:
             ok = create_scheduled_task(
                 task_name=task.get(Key.WindowsPlanName),
@@ -269,7 +234,7 @@ def create_task(task):
                 task_name=task.get(Key.WindowsPlanName),
                 task_id=task.get(Key.TaskID),
                 trigger_type=Key.Weekly,
-                day=task.get(Key.Weekly),
+                day=task.get(Key.ExecuteDay),
                 time=task.get(Key.ExecuteTime)
             )
         elif ui_trigger_type == Key.Monthly:
@@ -277,7 +242,7 @@ def create_task(task):
                 task_name=task.get(Key.WindowsPlanName),
                 task_id=task.get(Key.TaskID),
                 trigger_type=Key.Monthly,
-                day=task.get(Key.Monthly),
+                day=task.get(Key.ExecuteDay),
                 time=task.get(Key.ExecuteTime)
             )
         return ok, None

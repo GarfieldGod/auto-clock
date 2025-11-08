@@ -2,9 +2,7 @@ import inspect
 from pathlib import Path
 from datetime import datetime
 
-from platformdirs import user_data_dir
-
-DataRoot = user_data_dir("data", "auto-clock")
+from src.utils.const import AppPath
 
 _global_log_file = None
 _global_log_path = None
@@ -14,7 +12,7 @@ class Log:
     def open(cls):
         global _global_log_file, _global_log_path
         if _global_log_file is None:
-            log_dir = Path(user_data_dir("log", "auto-clock"))
+            log_dir = Path(AppPath.LogRoot)
             log_dir.mkdir(parents=True, exist_ok=True)
             _global_log_path = log_dir / f"{datetime.now().strftime("%Y-%m-%d_%H_%M_%S.%f")}.log"
 

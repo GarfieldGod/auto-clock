@@ -1,16 +1,15 @@
-import json
 import os
 import sys
+import json
+import requests
+import platform
 from pathlib import Path
 
-from platformdirs import user_data_dir
+from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QLabel
 
-from src.utils.const import Key
 from src.utils.log import Log
-
-DataRoot = user_data_dir("data", "auto-clock")
-data_json = f"{DataRoot}\\data.json"
-tasks_json = f"{DataRoot}\\tasks.json"
+from src.utils.const import Key, AppPath
 
 class Utils:
     @staticmethod
@@ -59,7 +58,7 @@ class Utils:
 
     @staticmethod
     def find_task(task_id):
-        tasks_data = Utils.read_dict_from_json(tasks_json)
+        tasks_data = Utils.read_dict_from_json(AppPath.TasksJson)
         if not tasks_data:
             return None
         if isinstance(tasks_data, list):
@@ -70,3 +69,70 @@ class Utils:
             if str(tasks_data.get(Key.TaskID)) == str(task_id):
                 return tasks_data
         return None
+
+    @staticmethod
+    def short_to_long_day(short_day: str):
+        mapping = {
+            "Mon": "Monday",
+            "Tue": "Tuesday",
+            "Wed": "Wednesday",
+            "Thu": "Thursday",
+            "Fri": "Friday",
+            "Sat": "Saturday",
+            "Sun": "Sunday"
+        }
+        return mapping.get(short_day, short_day)
+
+    @staticmethod
+    def get_device_info():
+        info = {
+            "device_name": platform.node(),
+            "system": platform.system(),
+            "version": platform.version(),
+            "machine": platform.machine(),
+            "python_version": platform.python_version(),
+            "processor": platform.processor()
+        }
+        return info
+
+    @staticmethod
+    def get_location_into(ip=None):
+        url = f"https://ipinfo.io/{ip}/json" if ip else "https://ipinfo.io/json"
+        try:
+            response = requests.get(url, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+
+            info = {
+                "ip": data.get("ip"),
+                "city": data.get("city"),
+                "region": data.get("region"),
+                "country": data.get("country"),
+                "loc": data.get("loc"),
+                "org": data.get("org"),
+                "timezone": data.get("timezone")
+            }
+            return info
+        except Exception as e:
+            Log.error(f"Get Location Into Failed: {e}")
+            return None
+
+class QtUI:
+    @staticmethod
+    def create_label(message, size=11, length=150, family="Arial", width_policy=None, height_policy=None,
+                     alignment=None, fixed_width=None, fixed_height=None):
+        label = QLabel(message)
+        font = QFont()
+        font.setFamily(family)
+        font.setPointSize(size)
+        label.setFont(font)
+        label.setFixedWidth(length)
+        if width_policy is not None and height_policy is not None:
+            label.setSizePolicy(width_policy, height_policy)
+        if alignment is not None:
+            label.setAlignment(alignment)
+        if fixed_width is not None:
+            label.setFixedWidth(fixed_width)
+        if fixed_height is not None:
+            label.setFixedHeight(fixed_height)
+        return label

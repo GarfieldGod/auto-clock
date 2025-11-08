@@ -1,7 +1,9 @@
 import sys
+
+from PyQt5.QtCore import QDate, Qt, QLocale
 from PyQt5.QtWidgets import (QApplication, QWidget, QGridLayout, QPushButton,
                              QLabel, QHBoxLayout, QToolButton, QVBoxLayout, QSizePolicy)
-from PyQt5.QtCore import QDate, Qt, QLocale
+
 
 class Calendar(QWidget):
     selected_dates = []
@@ -191,10 +193,10 @@ class Calendar(QWidget):
                     btn.setObjectName("not_this_month")
                     next_month_day += 1
                 else:
-                    if date == QDate.currentDate():
-                        btn.setObjectName("today")
                     if col == week_to_col["6"] or col == week_to_col["7"]:
                         btn.setObjectName("weekend")
+                    if date == QDate.currentDate():
+                        btn.setObjectName("today")
                     current_day += 1
 
                 btn.setText(day_str)
@@ -216,10 +218,10 @@ class Calendar(QWidget):
 
         if btn.isChecked():
             if selected_date not in self.selected_dates:
-                self.selected_dates.append(selected_date)
+                self.selected_dates.append(selected_date.toString('yyyy-MM-dd'))
         else:
             if selected_date in self.selected_dates:
-                self.selected_dates.remove(selected_date)
+                self.selected_dates.remove(selected_date.toString('yyyy-MM-dd'))
         print(f"点击日期：{selected_date.toString('yyyy-MM-dd')} 所有已选: {self.selected_dates}")
 
     def prev_month(self):
@@ -230,7 +232,6 @@ class Calendar(QWidget):
         self.current_date = self.current_date.addMonths(1)
         self.refresh_calendar()
 
-# 测试代码
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")

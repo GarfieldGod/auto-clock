@@ -17,6 +17,7 @@ from src.core.clock_manager import ClockManager, run_clock, get_driver_path
 from src.extend.auto_windows_login import auto_windows_login_on, auto_windows_login_off
 from src.ui.ui_calendar import Calendar
 from src.extend.auto_windows_plan import create_task, delete_scheduled_task
+from src.utils.const import Key
 from src.utils.log import Log
 from src.utils.utils import Utils, data_json, tasks_json
 
@@ -24,7 +25,7 @@ BackGround_Color = "#ffffff"
 Border_Color = "#000000"
 Text_Color = "grey"
 Border_Width = "1px"
-Border_Radius = ""
+Border_Radius = Key.Empty
 
 class ConfigWindow(QMainWindow):
     task_list = []
@@ -172,24 +173,24 @@ class ConfigWindow(QMainWindow):
     def write_json(self):
         retry_times = None
         tolerance_angle = None
-        if self.captcha_retry_times.text() != "":
+        if self.captcha_retry_times.text() != Key.Empty:
             retry_times = int(self.captcha_retry_times.text())
-        if self.captcha_tolerance_angle.text() != "":
+        if self.captcha_tolerance_angle.text() != Key.Empty:
             tolerance_angle = int(self.captcha_tolerance_angle.text())
         data = {
-            "user_name": self.user_name.text(),
-            "user_password": self.user_password.text(),
-            "driver_path": self.driver_path.text(),
-            "always_retry_check_box": self.always_retry_check_box.isChecked(),
-            "send_email_failed": self.send_email_failed.isChecked(),
-            "send_email_success": self.send_email_success.isChecked()
+            Key.UserName: self.user_name.text(),
+            Key.UserPassword: self.user_password.text(),
+            Key.DriverPath: self.driver_path.text(),
+            Key.AlwaysRetry: self.always_retry_check_box.isChecked(),
+            Key.SendEmailWhenFailed: self.send_email_failed.isChecked(),
+            Key.SendEmailWhenSuccess: self.send_email_success.isChecked()
         }
-        if self.captcha_failed_email.text() != "":
-            data["captcha_failed_email"] = self.captcha_failed_email.text()
+        if self.captcha_failed_email.text() != Key.Empty:
+            data[Key.NotificationEmail] = self.captcha_failed_email.text()
         if retry_times is not None:
-            data["captcha_retry_times"] = retry_times
+            data[Key.CaptchaRetryTimes] = retry_times
         if tolerance_angle is not None:
-            data["captcha_tolerance_angle"] = tolerance_angle
+            data[Key.CaptchaToleranceAngle] = tolerance_angle
 
         try:
             ok = ClockManager.check_data(data)
@@ -224,16 +225,16 @@ class ConfigWindow(QMainWindow):
 
             data = Utils.read_dict_from_json(data_json)
 
-            self.user_name.setText(data.get("user_name", ""))
-            self.user_password.setText(data.get("user_password", ""))
-            self.captcha_retry_times.setText(str(data.get("captcha_retry_times", "")))
-            self.captcha_tolerance_angle.setText(str(data.get("captcha_tolerance_angle", "")))
-            self.always_retry_check_box.setChecked(data.get("always_retry_check_box", False))
-            self.send_email_failed.setChecked(data.get("send_email_failed", False))
-            self.send_email_success.setChecked(data.get("send_email_success", False))
-            self.captcha_failed_email.setText(data.get("captcha_failed_email", ""))
+            self.user_name.setText(data.get(Key.UserName, Key.Empty))
+            self.user_password.setText(data.get(Key.UserPassword, Key.Empty))
+            self.captcha_retry_times.setText(str(data.get(Key.CaptchaRetryTimes, Key.Empty)))
+            self.captcha_tolerance_angle.setText(str(data.get(Key.CaptchaToleranceAngle, Key.Empty)))
+            self.always_retry_check_box.setChecked(data.get(Key.AlwaysRetry, False))
+            self.send_email_failed.setChecked(data.get(Key.SendEmailWhenFailed, False))
+            self.send_email_success.setChecked(data.get(Key.SendEmailWhenSuccess, False))
+            self.captcha_failed_email.setText(data.get(Key.NotificationEmail, Key.Empty))
             if inner_driver is None:
-                self.driver_path.setText(data.get("driver_path", ""))
+                self.driver_path.setText(data.get(Key.DriverPath, Key.Empty))
             return True
         except Exception as e:
             MessageBox(f"Load Data Failed!\nError: {e}")
@@ -248,10 +249,10 @@ class ConfigWindow(QMainWindow):
         run_clock()
 
     def get_group_css(self, css_data):
-        background_color = css_data["BackGround_Color"] if css_data.get("BackGround_Color") is not None and css_data["BackGround_Color"] != "" else BackGround_Color
-        text_color = css_data["Text_Color"] if css_data.get("Text_Color") is not None and css_data["Text_Color"] != "" else Text_Color
-        border_color = css_data["Border_Color"] if css_data.get("Border_Color") is not None and css_data["Border_Color"] != "" else Border_Color
-        border_width = css_data["Border_Width"] if css_data.get("Border_Width") is not None and css_data["Border_Width"] != "" else Border_Width
+        background_color = css_data["BackGround_Color"] if css_data.get("BackGround_Color") is not None and css_data["BackGround_Color"] != Key.Empty else BackGround_Color
+        text_color = css_data["Text_Color"] if css_data.get("Text_Color") is not None and css_data["Text_Color"] != Key.Empty else Text_Color
+        border_color = css_data["Border_Color"] if css_data.get("Border_Color") is not None and css_data["Border_Color"] != Key.Empty else Border_Color
+        border_width = css_data["Border_Width"] if css_data.get("Border_Width") is not None and css_data["Border_Width"] != Key.Empty else Border_Width
         css = f"""
             QGroupBox {{
                 font-family: "Microsoft YaHei", "SimHei", sans-serif;
@@ -295,43 +296,43 @@ class ConfigWindow(QMainWindow):
             if plan_ui.exec_() == QDialog.Accepted:
                 value = plan_ui.values()
                 Log.info(f"create windows plan value: {value}")
-                plan_name = value.get("plan_name")
-                trigger_type = value.get("trigger_type")
-                operation = value.get("operation")
+                plan_name = value.get(Key.WindowsPlanName)
+                trigger_type = value.get(Key.TriggerType)
+                operation = value.get(Key.Operation)
                 if not value or not trigger_type or not operation:
                     return
 
-                execute_time = value.get("hour") + ":" + value.get("minute")
+                execute_time = value.get(Key.Hour) + ":" + value.get(Key.Minute)
                 task_name = operation + "_Type_" + trigger_type
                 task = {
-                    "short_name": task_name if not plan_name else plan_name,
-                    "operation": operation,
-                    "trigger_type": trigger_type,
-                    "execute_time": execute_time
+                    Key.ShortName: task_name if not plan_name else plan_name,
+                    Key.Operation: operation,
+                    Key.TriggerType: trigger_type,
+                    Key.ExecuteTime: execute_time
                 }
 
                 plan_id = datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
-                task["plan_id"] = plan_id
+                task[Key.TaskID] = plan_id
 
-                if trigger_type == "Multiple":
-                    days = value.get("calendar")
+                if trigger_type == Key.Multiple:
+                    days = value.get(Key.Calendar)
                     ret = True
-                    error_message = ""
+                    error_message = Key.Empty
                     tasks = {}
                     for day in days:
-                        task["multiple_name"] = plan_name
-                        task["plan_name"] = plan_name
+                        task[Key.MultipleName] = plan_name
+                        task[Key.WindowsPlanName] = plan_name
                         execute_day = str(day.year()) + "-" + str(Utils.get_nums_array(day.month(),day.month(),2)[0]) + "-" + str(Utils.get_nums_array(day.day(),day.day(),2)[0])
-                        task["execute_day"] = execute_day
+                        task[Key.ExecuteDay] = execute_day
                         temp_name = task_name
                         temp_name += execute_day
-                        if task.get("plan_name") is None or task.get("plan_name") == "" or task.get("plan_name") == "Default":
-                            task["plan_name"] = temp_name + "_" + execute_time
+                        if task.get(Key.WindowsPlanName) is None or task.get(Key.WindowsPlanName) == Key.Empty or task.get(Key.WindowsPlanName) == Key.DefaultWindowsPlanName:
+                            task[Key.WindowsPlanName] = temp_name + "_" + execute_time
                         else:
-                            task["plan_name"] += "_" + execute_day
-                        task["plan_name"] += "_id_" + plan_id
-                        task["plan_name"] = task["plan_name"].replace(":", "_").replace(" ", "_").replace("-", "_")
-                        tasks[execute_day] = task["plan_name"]
+                            task[Key.WindowsPlanName] += "_" + execute_day
+                        task[Key.WindowsPlanName] += "_id_" + plan_id
+                        task[Key.WindowsPlanName] = task[Key.WindowsPlanName].replace(":", "_").replace(" ", "_").replace("-", "_")
+                        tasks[execute_day] = task[Key.WindowsPlanName]
                         Log.info(task)
                         ok, error = create_task(task)
                         if error:
@@ -339,41 +340,30 @@ class ConfigWindow(QMainWindow):
                         if ok is False: ret = False
                     if ret:
                         MessageBox("Create Task Success!")
-                        task["plan_name"] = tasks
-                        tasks["execute_day"] = None
+                        task[Key.WindowsPlanName] = tasks
+                        task.pop(Key.ExecuteDay)
                     else:
                         raise Exception(error_message)
                 else:
-                    task["plan_name"] = plan_name
-                    if trigger_type == "Once":
-                        date = QDate(int(value.get("year")), int(value.get("month")), int(value.get("day")))
-                        execute_day = value.get("year") + "-" + value.get("month") + "-" + value.get("day")
+                    task[Key.WindowsPlanName] = plan_name
+                    if trigger_type == Key.Once:
+                        date = QDate(int(value.get(Key.Year)), int(value.get(Key.Month)), int(value.get(Key.Day)))
+                        execute_day = value.get(Key.Year) + "-" + value.get(Key.Month) + "-" + value.get(Key.Day)
                         if date < QDate.currentDate():
                             raise Exception(f"Invalid Date: {execute_day} Early than Today!")
-                        task["execute_day"] = execute_day
+                        task[Key.ExecuteDay] = execute_day
                         task_name += "_" + execute_day
-                    # elif trigger_type == "Multipl":
-                    #     days = value.get("calendar")
-                    #     execute_days = []
-                    #     for day in days:
-                    #         execute_day = str(day.year()) + "-" + str(
-                    #             Utils.get_nums_array(day.month(), day.month(), 2)[0]) + "-" + str(
-                    #             Utils.get_nums_array(day.day(), day.day(), 2)[0])
-                    #         execute_days.append(execute_day)
-                    #     task["execute_days"] = execute_days
-                    #     Log.info(f"execute_days {execute_days}")
-                    #     task_name += execute_days[0] + "-" + execute_days[len(execute_days)-1]
-                    elif trigger_type == "Weekly":
-                        task["weekly"] = value.get("weekly")
-                        task_name += "_" + value.get("weekly")
-                    elif trigger_type == "Monthly":
-                        task["monthly"] = value.get("monthly")
-                        task_name += "_" + value.get("monthly")
+                    elif trigger_type == Key.Weekly:
+                        task[Key.Weekly] = value.get(Key.Weekly)
+                        task_name += "_" + value.get(Key.Weekly)
+                    elif trigger_type == Key.Monthly:
+                        task[Key.Monthly] = value.get(Key.Monthly)
+                        task_name += "_" + value.get(Key.Monthly)
                     task_name += "_" + execute_time
-                    if task.get("plan_name") is None or task.get("plan_name") == "" or task.get("plan_name") == "Default":
-                        task["plan_name"] = task_name
-                    task["plan_name"] += "_id_" + plan_id
-                    task["plan_name"] = task["plan_name"].replace(":", "_").replace(" ", "_").replace("-", "_")
+                    if task.get(Key.WindowsPlanName) is None or task.get(Key.WindowsPlanName) == Key.Empty or task.get(Key.WindowsPlanName) == Key.DefaultWindowsPlanName:
+                        task[Key.WindowsPlanName] = task_name
+                    task[Key.WindowsPlanName] += "_id_" + plan_id
+                    task[Key.WindowsPlanName] = task[Key.WindowsPlanName].replace(":", "_").replace(" ", "_").replace("-", "_")
                     Log.info(task)
                     ok, error = create_task(task)
                     if error:
@@ -416,27 +406,27 @@ class ConfigWindow(QMainWindow):
 
     def add_windows_plan_ui(self, task):
         widget_plan_line = QWidget()
-        widget_plan_line.setObjectName(task["plan_id"])
+        widget_plan_line.setObjectName(task[Key.TaskID])
         layout_plan_line = QHBoxLayout(widget_plan_line)
         layout_plan_line.setContentsMargins(0, 0, 0, 0)
         layout_plan_line.setAlignment(Qt.AlignCenter | Qt.AlignLeft)
         front_size = 8
         label_alignment = Qt.AlignLeft
-        label_p = create_label(Utils.truncate_text(task["plan_name"] if not isinstance(task["plan_name"], dict) else task.get("multiple_name", ""), 15),size=front_size, fixed_width=140)
+        label_p = create_label(Utils.truncate_text(task[Key.WindowsPlanName] if not isinstance(task[Key.WindowsPlanName], dict) else task.get(Key.MultipleName, Key.Empty), 15),size=front_size, fixed_width=140)
         layout_plan_line.addWidget(label_p)
-        label_o = create_label(Utils.truncate_text(task["operation"], 10),size=front_size, alignment=label_alignment, fixed_width=80)
+        label_o = create_label(Utils.truncate_text(task[Key.Operation], 10),size=front_size, alignment=label_alignment, fixed_width=80)
         layout_plan_line.addWidget(label_o)
-        label_t = create_label(task["trigger_type"], size=front_size, alignment=label_alignment, fixed_width=50)
+        label_t = create_label(task[Key.TriggerType], size=front_size, alignment=label_alignment, fixed_width=50)
         layout_plan_line.addWidget(label_t)
-        label_et = create_label(task["execute_time"],size=front_size, alignment=Qt.AlignCenter, fixed_width=50)
+        label_et = create_label(task[Key.ExecuteTime],size=front_size, alignment=Qt.AlignCenter, fixed_width=50)
         layout_plan_line.addWidget(label_et)
-        if task["trigger_type"] == "Once":
-            layout_plan_line.addWidget(create_label(task["execute_day"],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
-        elif task["trigger_type"] == "Weekly":
-            layout_plan_line.addWidget(create_label(task["weekly"],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
-        elif task["trigger_type"] == "Monthly":
-            layout_plan_line.addWidget(create_label(task["monthly"],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
-        elif task["trigger_type"] == "Multiple":
+        if task[Key.TriggerType] == Key.Once:
+            layout_plan_line.addWidget(create_label(task[Key.ExecuteDay],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
+        elif task[Key.TriggerType] == Key.Weekly:
+            layout_plan_line.addWidget(create_label(task[Key.Weekly],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
+        elif task[Key.TriggerType] == Key.Monthly:
+            layout_plan_line.addWidget(create_label(task[Key.Monthly],size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
+        elif task[Key.TriggerType] == Key.Multiple:
             layout_plan_line.addWidget(create_label("[······]",size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
             pass
 
@@ -458,20 +448,21 @@ class ConfigWindow(QMainWindow):
 
             delete_task = None
             for task in self.task_list:
-                if task["plan_id"] == plan_id:
+                if task[Key.TaskID] == plan_id:
                     delete_task = task
                     break
             if delete_task is None:
                 raise Exception(f"Delete plan failed, no plan id: {plan_id}")
-            plan_name = delete_task["plan_name"]
+            short_name = delete_task[Key.ShortName]
+            plan_name = delete_task[Key.WindowsPlanName]
 
-            dlg = MessageBox(f"\nAre you really want to delete this Plan:\n\n{plan_name}\n", need_check=True, message_only=False, message_name="Delete Plan")
+            dlg = MessageBox(f"\nAre you really want to delete this Plan:\n\n{short_name}\n", need_check=True, message_only=False, message_name="Delete Plan")
             if dlg.exec_() != QDialog.Accepted:
                 return
 
-            if delete_task["trigger_type"] == "Multiple":
+            if delete_task[Key.TriggerType] == Key.Multiple:
                 for task_name in plan_name:
-                    ok, error = delete_scheduled_task(task_name)
+                    ok, error = delete_scheduled_task(plan_name.get(task_name))
                     if not ok: raise Exception(error)
             else:
                 ok, error = delete_scheduled_task(plan_name)
@@ -515,8 +506,8 @@ class WindowsLoginDialog(QDialog):
             MessageBox(f"Clear Failed!\nError: {e}")
 
 class WindowsPlanDialog(QDialog):
-    trigger_types = ["Once", "Multiple", "Daily", "Weekly", "Monthly"]
-    operation_types = ["Auto Clock", "Shut Down Windows"]
+    trigger_types = [Key.Once, Key.Multiple, Key.Daily, Key.Weekly, Key.Monthly]
+    operation_types = [Key.AutoClock, Key.ShutDownWindows]
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -525,7 +516,7 @@ class WindowsPlanDialog(QDialog):
             self.setWindowTitle("Create Windows Plan")
             self.setWindowIcon(QIcon(Utils.get_ico_path()))
             self.plan_name_edit = QLineEdit()
-            self.plan_name_edit.setText("Default")
+            self.plan_name_edit.setText(Key.DefaultWindowsPlanName)
             self.trigger_type = QComboBox()
             self.trigger_type.addItems(self.trigger_types)
             self.trigger_type.currentTextChanged.connect(self.trigger_type_changed)
@@ -679,17 +670,17 @@ class WindowsPlanDialog(QDialog):
         selected_dates = copy.deepcopy(self.calendar_selector.selected_dates)
         self.calendar_selector.selected_dates.clear()
         return {
-            "plan_name": self.plan_name_edit.text().strip(),
-            "trigger_type": self.trigger_type.currentText().strip(),
-            "operation": self.operation.currentText().strip() ,
-            "year": self.year_sel.currentText().strip(),
-            "month": self.month_sel.currentText().strip(),
-            "day": self.day_sel.currentText().strip(),
-            "hour": self.hour_sel.currentText().strip(),
-            "minute": self.minute_sel.currentText().strip(),
-            "calendar": selected_dates,
-            "weekly": self.weekly_day_sel.currentText().strip()[0:3],
-            "monthly": self.monthly_day_sel.currentText().strip()
+            Key.WindowsPlanName: self.plan_name_edit.text().strip(),
+            Key.TriggerType: self.trigger_type.currentText().strip(),
+            Key.Operation: self.operation.currentText().strip() ,
+            Key.Year: self.year_sel.currentText().strip(),
+            Key.Month: self.month_sel.currentText().strip(),
+            Key.Day: self.day_sel.currentText().strip(),
+            Key.Hour: self.hour_sel.currentText().strip(),
+            Key.Minute: self.minute_sel.currentText().strip(),
+            Key.Calendar: selected_dates,
+            Key.Weekly: self.weekly_day_sel.currentText().strip()[0:3],
+            Key.Monthly: self.monthly_day_sel.currentText().strip()
         }
 
 class MessageBox(QDialog):

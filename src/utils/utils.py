@@ -5,6 +5,7 @@ from pathlib import Path
 
 from platformdirs import user_data_dir
 
+from src.utils.const import Key
 from src.utils.log import Log
 
 DataRoot = user_data_dir("data", "auto-clock")
@@ -63,9 +64,9 @@ class Utils:
             return None
         if isinstance(tasks_data, list):
             for task in tasks_data:
-                if str(task.get("plan_id")) == str(task_id):
+                if str(task.get(Key.TaskID)) == str(task_id):
                     return task
         elif isinstance(tasks_data, dict):
-            if str(tasks_data.get("plan_id")) == str(task_id):
+            if str(tasks_data.get(Key.TaskID)) == str(task_id):
                 return tasks_data
         return None

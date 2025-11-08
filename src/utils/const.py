@@ -1,38 +1,55 @@
 from dataclasses import dataclass
 
+from platformdirs import user_data_dir
+
+
 @dataclass
 class Key:
-    NotificationEmail: str = "captcha_failed_email"
-    WindowsPlanName: str = "plan_name"
-    Operation: str = "operation"
+    TaskName: str = "task_name"
+    TaskID: str = "task_id"
     TriggerType: str = "trigger_type"
-    Hour: str = "hour"
-    Minute: str = "minute"
-    ShortName: str = "short_name"
+    Operation: str = "operation"
+    WindowsPlanName: str = "windows_plan_name"
     ExecuteTime: str = "execute_time"
     ExecuteDay: str = "execute_day"
-    TaskID: str = "plan_id"
-    Multiple: str = "Multiple"
-    Calendar: str = "calendar"
-    MultipleName: str = "multiple_name"
-    DefaultWindowsPlanName: str = "AutoClock_Windows_Plan"
+    ExecuteDays: str = "execute_days"
+
     Year: str = "year"
     Month: str = "month"
     Day: str = "day"
+    Hour: str = "hour"
+    Minute: str = "minute"
+
     Once: str = "Once"
+    Multiple: str = "Multiple"
     Daily: str = "Daily"
     Weekly: str = "Weekly"
     Monthly: str = "Monthly"
+
+    NotificationEmail: str = "notification_email"
     SendEmailWhenSuccess: str = "send_email_success"
     SendEmailWhenFailed: str = "send_email_failed"
+
     UserName: str = "user_name"
     UserPassword: str = "user_password"
+    DriverPath: str = "driver_path"
     CaptchaRetryTimes: str = "captcha_retry_times"
     CaptchaToleranceAngle: str = "captcha_tolerance_angle"
-    DriverPath: str = "driver_path"
-    AlwaysRetry: str = "always_retry_check_box"
+    AlwaysRetry: str = "always_retry"
+
+    AutoClock: str = "Auto Clock"
     ShutDownWindows: str = "Shut Down Windows"
     WindowsSleep: str = "Windows Sleep"
-    AutoClock: str = "Auto Clock"
+
+    DefaultWindowsPlanName: str = "AutoClock_Windows_Plan"
     Unknown: str = "Unknown"
     Empty: str = ""
+
+@dataclass
+class AppPath:
+    LogRoot = user_data_dir("log", "auto-clock")
+    DataRoot = user_data_dir("data", "auto-clock")
+    BackupRoot = user_data_dir("backup", "auto-clock")
+    ScreenshotRoot = user_data_dir("screenshot", "auto-clock")
+    DataJson: str = f"{DataRoot}\\data.json"
+    TasksJson: str = f"{DataRoot}\\tasks.json"

@@ -124,10 +124,10 @@ def run_clock(is_test=False):
 
 def get_driver_path(driver_name="Edge_Driver/msedgedriver.exe"):
     if hasattr(sys, "_MEIPASS"):
-        print("release")
+        Log.info("Release mode")
         driver_dir = os.path.join(sys._MEIPASS, "drivers")
     else:
-        print("debug")
+        Log.info("Debug mode")
         return None
 
     driver_path = os.path.join(driver_dir, driver_name)

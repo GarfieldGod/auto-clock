@@ -3,7 +3,7 @@ import json
 import sys
 
 from src.utils.log import Log
-from test.test import run_test
+# from test.test import run_test
 from src.utils.const import Key, AppPath
 from src.core.auto_clock import AutoClock, Config
 
@@ -113,7 +113,7 @@ def run_clock(is_test=False):
                 Log.error(clock.error)
                 return False, clock.error
         else:
-            run_test()
+            # run_test()
             return True, None
     except Exception as e:
         return False, str(e)

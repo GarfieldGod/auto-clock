@@ -300,13 +300,11 @@ class ConfigWindow(QMainWindow):
                 operation = value.get("operation")
                 if not value or not trigger_type or not operation:
                     return
-                # if not plan_name:
-                #     MessageBox("You have to enter the plan name!")
-                #     return
 
                 execute_time = value.get("hour") + ":" + value.get("minute")
-                task_name = operation + "_" + trigger_type + "_"
+                task_name = operation + "_Type_" + trigger_type
                 task = {
+                    "short_name": task_name if not plan_name else plan_name,
                     "operation": operation,
                     "trigger_type": trigger_type,
                     "execute_time": execute_time

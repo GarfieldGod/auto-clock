@@ -9,8 +9,7 @@ from src.utils.log import Log
 from src.utils.utils import Utils, tasks_json
 
 
-def get_command_prefix():
-    if hasattr(sys, '_MEIPASS'):
+def get_execute_file_prefix():
         exe_path = get_current_exe_path()
         exe_path = Path(exe_path).absolute()
         Log.info(exe_path)
@@ -19,29 +18,17 @@ def get_command_prefix():
             Log.error(message)
             raise Exception(message)
         return str(exe_path)
+
+def get_operation(task_id):
+    if hasattr(sys, '_MEIPASS'):
+        exe_path = get_execute_file_prefix()
+        return f'"{exe_path}" --task_id={task_id}'
     else:
-        return f"{Path(__file__).parent.parent / "entry.py"}"
-
-def get_operation(operation_type):
-    prefix = get_command_prefix()
-
-    suffix = " --"
-    if operation_type == "Auto Clock":
-        suffix += "auto"
-    elif operation_type == "Shut Down Windows":
-        suffix += "shutdown"
-    elif operation_type == "Windows Sleep":
-        suffix += "sleep"
-    else:
-        message = "Unknow operation type!"
-        Log.error(message)
-        raise Exception(message)
-
-    return f"{prefix}{suffix}"
+        return f'"{Path(__file__).parent.parent.parent / ".venv/Scripts/python.exe"}" {Path(__file__).parent.parent.parent / "entry.py"} --task_id={task_id}'
 
 def create_scheduled_task(
     task_name: str,
-    operation: str,
+    task_id: str,
     trigger_type: str,  # 触发类型：daily=每天，onlogon=登录后，weekly=每周
     day: str = None,
     time: str = None,          # 仅 trigger_type=daily/weekly 有效，格式 HH:MM
@@ -50,19 +37,19 @@ def create_scheduled_task(
     创建 Windows 计划任务，自动定时运行 exe
 
     :param task_name: 计划任务名称（唯一）
-    :param operation: 要执行的操作
+    :param task_id: 任务ID
     :param trigger_type: 触发类型：daily(每天)/onlogon(登录后)/weekly(每周)
     :param day: 执行日期
     :param time: 执行时间
     :return: 创建成功返回 True，失败返回 False
     """
     run_as_admin: bool = True
-    operation = get_operation(operation)
+    operation = get_operation(task_id)
 
     cmd = [
         "schtasks", "/create",
         "/tn", task_name,
-        "/tr", f'"{operation}"'.strip(),
+        "/tr", f"{operation}".strip(),
         "/sc", trigger_type,
         "/f", # 强制覆盖同名任务
     ]
@@ -104,7 +91,7 @@ def create_scheduled_task(
         Log.info(check_result.stdout)
 
         if "任务名" in check_result.stdout or result.stderr is None:
-            Log.info(f"\n计划任务创建成功！")
+            Log.info(f"计划任务创建成功！")
             Log.info(f"任务名：{task_name}")
             Log.info(f"触发类型：{trigger_type}")
             if trigger_type in ["daily", "weekly"]:
@@ -225,11 +212,10 @@ def get_task_day(target_date):
         raise Exception(message)
 
 def get_current_exe_path():
-    current_dir = None
+    exe_path = None
     if getattr(sys, 'frozen', False):
         exe_path = sys.executable
-        current_dir = os.path.dirname(exe_path)
-    return current_dir
+    return exe_path
 
 def create_task(task):
     try:
@@ -246,7 +232,7 @@ def create_task(task):
         if ui_trigger_type == "Once" or ui_trigger_type == "Multiple":
             ok = create_scheduled_task(
                 task_name=task.get("plan_name"),
-                operation=task.get("operation"),
+                task_id=task.get("plan_id"),
                 trigger_type="ONCE",
                 day=task.get("execute_day"),
                 time=task.get("execute_time")
@@ -271,7 +257,7 @@ def create_task(task):
         elif ui_trigger_type == "Daily":
             ok = create_scheduled_task(
                 task_name=task.get("plan_name"),
-                operation=task.get("operation"),
+                task_id=task.get("plan_id"),
                 trigger_type="Daily",
                 day=None,
                 time=task.get("execute_time")
@@ -279,7 +265,7 @@ def create_task(task):
         elif ui_trigger_type == "Weekly":
             ok = create_scheduled_task(
                 task_name=task.get("plan_name"),
-                operation=task.get("operation"),
+                task_id=task.get("plan_id"),
                 trigger_type="Weekly",
                 day=task.get("weekly"),
                 time=task.get("execute_time")
@@ -287,7 +273,7 @@ def create_task(task):
         elif ui_trigger_type == "Monthly":
             ok = create_scheduled_task(
                 task_name=task.get("plan_name"),
-                operation=task.get("operation"),
+                task_id=task.get("plan_id"),
                 trigger_type="Monthly",
                 day=task.get("monthly"),
                 time=task.get("execute_time")

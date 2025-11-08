@@ -20,6 +20,7 @@ if __name__ == '__main__':
     parser.add_argument("--sleep", action="store_true")
     parser.add_argument("--email_success", action="store_true")
     parser.add_argument("--email_failed", action="store_true")
+    parser.add_argument("--task_id")
     args = parser.parse_args()
 
     clear_windows_plan()
@@ -42,31 +43,44 @@ if __name__ == '__main__':
             send_email_success = config_data.get("send_email_success", False)
             send_email_failed = config_data.get("send_email_failed", False)
 
+        ok = False
+        error = None
+        task = None
         try:
-            if args.auto:
-                operation = "Auto Clock"
-                ok, error = run_clock()
-            elif args.shutdown:
-                operation = "Shut Down Windows"
-                ok, error = run_windows_shutdown(30)
-            elif args.sleep:
-                operation = "Windows Sleep"
-                ok, error = run_windows_sleep()
-            else:
-                ok = False
-                error = "No operation specified."
-                quit()
+            if args.task_id:
+                task = Utils.find_task(args.task_id)
+                Log.info(f"Auto Clock Get Task: {task}")
+                if task and task.get("operation"):
+                    operation = task.get("operation")
+
+                if operation == "Auto Clock":
+                    ok, error = run_clock()
+                elif operation == "Shut Down Windows":
+                    ok, error = run_windows_shutdown(30)
+                elif operation == "Windows Sleep":
+                    ok, error = run_windows_sleep()
+                else:
+                    error = "No operation specified."
         except Exception as e:
-            ok = False
             error = str(e)
 
         if not error: error = "Unknow Error"
+        if not operation: operation = "Unknow"
+        if not task: task = {}
 
         if ok:
             if send_email_success and email:
-                send_email_by_auto_clock(email, subject="Auto Clock Success", title=f"{operation} Success", message=f"Your [{operation}] operation completed successfully.")
+                send_email_by_auto_clock(email, subject="Auto Clock Success", title=f"Task: {operation} Success",
+                                         message=f"Your [{operation}] operation completed successfully.<br>"
+                                                 f"Task Name: {task.get("short_name", "Unknown") if task.get("trigger_type") != "Multiple" else task.get("short_name", "Unknown")}<br>"
+                                                 f"Trigger Type: {task.get("trigger_type", "Unknown")}<br>"
+                                                 f"Execute Time: {task.get("execute_time", "Unknown")}<br>")
         else:
             if send_email_failed and email:
-                send_email_by_auto_clock(email, subject="Auto Clock Failed", title=f"{operation} Failed", message=f"Your [{operation}] operation failed. Error: [{error}]")
+                send_email_by_auto_clock(email, subject="Auto Clock Failed", title=f"Task: {operation} Failed",
+                                         message=f"Your [{operation}] operation failed. Error: [{error}]<br>"
+                                                 f"Task Name: {task.get("short_name", "Unknown") if task.get("trigger_type") != "Multiple" else task.get("short_name", "Unknown")}<br>"
+                                                 f"Trigger Type: {task.get("trigger_type", "Unknown")}<br>"
+                                                 f"Execute Time: {task.get("execute_time", "Unknown")}<br>")
 
     Log.close()

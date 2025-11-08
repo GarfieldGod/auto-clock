@@ -14,7 +14,7 @@ def run_windows_sleep():
 def run_windows_shutdown(delay_seconds=0):
     cmd = ["shutdown.exe", "/s", "/t", str(delay_seconds)]
     try:
-        # subprocess.run(cmd, check=True, shell=True)
+        subprocess.run(cmd, check=True, shell=True)
         message = f"关机命令已提交，将在 {delay_seconds} 秒后关机"
         Log.info(message)
         return True, None

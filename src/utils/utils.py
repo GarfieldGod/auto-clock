@@ -55,3 +55,17 @@ class Utils:
         else:
             base_path = os.path.abspath(".")
         return os.path.join(base_path, "icon.ico")
+
+    @staticmethod
+    def find_task(task_id):
+        tasks_data = Utils.read_dict_from_json(tasks_json)
+        if not tasks_data:
+            return None
+        if isinstance(tasks_data, list):
+            for task in tasks_data:
+                if str(task.get("plan_id")) == str(task_id):
+                    return task
+        elif isinstance(tasks_data, dict):
+            if str(tasks_data.get("plan_id")) == str(task_id):
+                return tasks_data
+        return None

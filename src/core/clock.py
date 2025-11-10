@@ -6,9 +6,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from src.utils.log import Log
+from src.utils.const import WebPath
 
 def clock(driver, sign_in_button_selector = ".kq-btn.pt43.clear a:first-child", wait=2):
-    if driver.current_url == "https://kq.neusoft.com/":
+    if driver.current_url == WebPath.NeusoftKQPath:
         Log.info("开始进行最终Clock操作...")
         try:
             waiter = WebDriverWait(driver, max(15, wait))

@@ -9,23 +9,6 @@ from src.utils.utils import Utils
 from src.utils.const import Key, AppPath
 
 
-def get_execute_file_prefix():
-        exe_path = get_current_exe_path()
-        exe_path = Path(exe_path).absolute()
-        Log.info(exe_path)
-        if not exe_path.exists():
-            message = f"Error: exe file do not exist: {exe_path}"
-            Log.error(message)
-            raise Exception(message)
-        return str(exe_path)
-
-def get_operation(task_id):
-    if hasattr(sys, '_MEIPASS'):
-        exe_path = get_execute_file_prefix()
-        return f'"{exe_path}" --task_id={task_id}'
-    else:
-        return f'"{Path(__file__).parent.parent.parent / ".venv/Scripts/python.exe"}" {Path(__file__).parent.parent.parent / "entry.py"} --task_id={task_id}'
-
 def create_scheduled_task(
     task_name: str,
     task_id: str,
@@ -38,13 +21,15 @@ def create_scheduled_task(
 
     :param task_name: 计划任务名称（唯一）
     :param task_id: 任务ID
-    :param trigger_type: 触发类型：daily(每天)/onlogon(登录后)/weekly(每周)
+    :param trigger_type: 触发类型
     :param day: 执行日期
     :param time: 执行时间
     :return: 创建成功返回 True，失败返回 False
     """
     run_as_admin: bool = True
-    operation = get_operation(task_id)
+    exe_path = Utils.get_execute_file()
+    if not exe_path: raise Exception("Can't get execute file path.")
+    operation = f'"{exe_path}" --task_id={task_id}'
 
     cmd = [
         "schtasks", "/create",
@@ -193,12 +178,6 @@ def get_task_day(target_date):
         message = f"Invalid time format (Valid format: HH:MM, e.g., 08:30), Error: {e}"
         Log.error(message)
         raise Exception(message)
-
-def get_current_exe_path():
-    exe_path = None
-    if getattr(sys, 'frozen', False):
-        exe_path = sys.executable
-    return exe_path
 
 def create_task(task):
     Log.info(f"Create Windows Scheduled Task: {task}")

@@ -4,7 +4,7 @@ import sys
 
 from src.utils.log import Log
 # from test.test import run_test
-from src.utils.const import Key, AppPath
+from src.utils.const import Key, AppPath, WebPath
 from src.core.auto_clock import AutoClock, Config
 
 class ClockManager:
@@ -50,7 +50,7 @@ class ClockManager:
     def clock(self):
         config = Config(
             self.driver_path,
-            "https://kq.neusoft.com/login",
+            WebPath.NeusoftKQLoginPath,
             self.user_name,
             self.user_password,
             captcha_attempts=self.captcha_retry_times if self.captcha_retry_times > 0 else 5,

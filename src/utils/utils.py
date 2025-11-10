@@ -117,6 +117,23 @@ class Utils:
             Log.error(f"Get Location Into Failed: {e}")
             return None
 
+    @staticmethod
+    def get_execute_file():
+        if hasattr(sys, '_MEIPASS'):
+            exe_path = None
+            if getattr(sys, 'frozen', False):
+                exe_path = sys.executable
+            if not exe_path: return None
+            exe_path = Path(exe_path).absolute()
+            Log.info(exe_path)
+            if not exe_path.exists():
+                message = f"Error: exe file do not exist: {exe_path}"
+                Log.error(message)
+                raise Exception(message)
+            return str(exe_path)
+        else:
+            return f'{Path(__file__).parent.parent.parent / ".venv/Scripts/python.exe"}" {Path(__file__).parent.parent.parent / "entry.py"}'
+
 class QtUI:
     @staticmethod
     def create_label(message, size=11, length=150, family="Arial", width_policy=None, height_policy=None,

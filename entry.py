@@ -70,7 +70,7 @@ if __name__ == '__main__':
                 elif operation == Key.ShutDownWindows:
                     ok, error = run_windows_shutdown(30)
                 elif operation == Key.WindowsSleep:
-                    ok, error = run_windows_sleep()
+                    ok, error = run_windows_sleep(30)
                 else:
                     error = "No operation specified."
 

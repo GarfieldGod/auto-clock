@@ -10,6 +10,79 @@ from src.utils.log import Log
 from src.utils.const import Key
 from src.utils.utils import Utils
 
+def get_email_message(email_subject, content_title, hello_message, content_message, sender_email, receiver_email, success=False):
+    Log.info(f"email_subject: {email_subject}")
+    Log.info(f"content_title: {content_title}")
+    Log.info(f"hello_message: {hello_message}")
+    # Log.info(f"content_message: {content_message}")
+    Log.info(f"sender_email: {sender_email}")
+    Log.info(f"receiver_email: {receiver_email}")
+    msg = MIMEText(html_content(f"{content_title}",f"{hello_message}", f"{content_message}", success=success), _subtype="html", _charset="utf-8")
+    msg["From"] = formataddr(("Auto Clock", f"{sender_email}"))
+    msg["To"] = Header(f"{receiver_email}", "utf-8")
+    msg["Subject"] = Header(f"{email_subject}", "utf-8")
+    return msg
+
+def send_email(context):
+    if context.get("smtp_server") is None or context.get("smtp_port") is None or context.get(
+            "sender_email") is None or context.get("sender_auth_code") is None or context.get(
+            "receiver_email") is None or context.get("message") is None or context.get(
+            "subject") is None or context.get("title") is None or context.get("hello") is None:
+        message = "Empty context!"
+        return False, message
+    try:
+        message = get_email_message(context.get("subject"), context.get("title"),context.get("hello"),context.get("message"),
+                                    context.get("sender_email"), context.get("receiver_email"), context.get("success", False))
+
+        server = smtplib.SMTP_SSL(context.get("smtp_server"), context.get("smtp_port"))
+        server.login(context.get("sender_email"), context.get("sender_auth_code"))
+        server.sendmail(context.get("sender_email"), context.get("receiver_email"), message.as_string())
+        Log.info("HTML Email Send Success!")
+        server.quit()
+        return True, None
+    except Exception as e:
+        Log.error(f"HTML Email Send Failed: {str(e)}")
+        return False, str(e)
+
+def send_email_by_auto_clock(receiver_email, subject, title, hello, message, ok):
+    email_info = {
+        "smtp_server": "smtp.163.com",
+        "smtp_port": 465,
+        "sender_email": "auto_clock@163.com",
+        "sender_auth_code": "AXx9tT5cHZKUQXjS",
+        "receiver_email": f"{receiver_email}",
+        "subject": f"{subject}",
+        "title": f"{title}",
+        "hello": f"{hello}",
+        "message": f"{message}",
+        "success": ok
+    }
+    ret, error = send_email(email_info)
+    return ret, error
+
+def send_email_by_result(task, email, send_email_success, send_email_failed, ok, error):
+    if not task or not email: return
+    if not send_email_success and not send_email_failed: return
+
+    if ok and send_email_success:
+        subject = "Auto Clock Success"
+        title = f"SUCCESS:&nbsp;&nbsp;[ {task.get(Key.TaskName, Key.Unknown)} ]"
+        hello = f"Your operation [{task.get(Key.Operation, Key.Unknown)}] has completed successfully."
+    elif not ok and send_email_failed:
+        subject = "Auto Clock Failed"
+        title = f"FAILED:&nbsp;&nbsp;[ {task.get(Key.TaskName, Key.Unknown)} ]"
+        hello = f"Sorry, Operation [{task.get(Key.Operation, Key.Unknown)}] Failed.<br>Error Message: {error}"
+    else:
+        return
+    device = Utils.get_device_info()
+    device_info = f"{device.get("device_name")} ({device.get("system")} {device.get("version")})" if device else "Unknown Device"
+    Log.info(f"device_info: {device_info}")
+    ip = Utils.get_location_into()
+    ip_info = f"{ip.get("city")} ({ip.get("country")} {ip.get("region")}) {ip.get("ip")}" if ip else "Unknown Location"
+    Log.info(f"ip_info: {ip_info}")
+
+    message = get_info_html(task, device_info, ip_info)
+    send_email_by_auto_clock(receiver_email=email, subject=subject, title=title, hello=hello, message=message, ok=ok)
 
 def html_content(content_title, hello, message, success):
     content = f"""
@@ -131,88 +204,6 @@ def get_info_html(task, device_info, ip_info):
     </table>
     """
     return info_html
-
-def get_email_message(email_subject, content_title, hello_message, content_message, sender_email, receiver_email, success=False):
-    Log.info(f"email_subject: {email_subject}")
-    Log.info(f"content_title: {content_title}")
-    Log.info(f"hello_message: {hello_message}")
-    # Log.info(f"content_message: {content_message}")
-    Log.info(f"sender_email: {sender_email}")
-    Log.info(f"receiver_email: {receiver_email}")
-    msg = MIMEText(html_content(f"{content_title}",f"{hello_message}", f"{content_message}", success=success), _subtype="html", _charset="utf-8")
-    msg["From"] = formataddr(("Auto Clock", f"{sender_email}"))
-    msg["To"] = Header(f"{receiver_email}", "utf-8")
-    msg["Subject"] = Header(f"{email_subject}", "utf-8")
-    return msg
-
-def send_email(context):
-    if context.get("smtp_server") is None or context.get("smtp_port") is None or context.get(
-            "sender_email") is None or context.get("sender_auth_code") is None or context.get(
-            "receiver_email") is None or context.get("message") is None or context.get(
-            "subject") is None or context.get("title") is None or context.get("hello") is None:
-        message = "Empty context!"
-        return False, message
-    try:
-        message = get_email_message(context.get("subject"), context.get("title"),context.get("hello"),context.get("message"),
-                                    context.get("sender_email"), context.get("receiver_email"), context.get("success", False))
-
-        server = smtplib.SMTP_SSL(context.get("smtp_server"), context.get("smtp_port"))
-        server.login(context.get("sender_email"), context.get("sender_auth_code"))
-        server.sendmail(context.get("sender_email"), context.get("receiver_email"), message.as_string())
-        Log.info("HTML Email Send Success!")
-        server.quit()
-        return True, None
-    except Exception as e:
-        Log.error(f"HTML Email Send Failed: {str(e)}")
-        return False, str(e)
-
-def send_email_by_auto_clock(receiver_email, subject, title, hello, message, ok):
-    email_info = {
-        "smtp_server": "smtp.163.com",
-        "smtp_port": 465,
-        "sender_email": "auto_clock@163.com",
-        "sender_auth_code": "AXx9tT5cHZKUQXjS",
-        "receiver_email": f"{receiver_email}",
-        "subject": f"{subject}",
-        "title": f"{title}",
-        "hello": f"{hello}",
-        "message": f"{message}",
-        "success": ok
-    }
-    ret, error = send_email(email_info)
-    return ret, error
-
-def send_email_by_result(task, email, send_email_success, send_email_failed, ok, error):
-    if not task or not email: return
-    if not send_email_success and not send_email_failed: return
-
-    if ok and send_email_success:
-        subject = "Auto Clock Success"
-        title = f"SUCCESS:&nbsp;&nbsp;[ {task.get(Key.TaskName, Key.Unknown)} ]"
-        hello = f"Your operation [{task.get(Key.Operation, Key.Unknown)}] has completed successfully."
-    elif not ok and send_email_failed:
-        subject = "Auto Clock Failed"
-        title = f"FAILED:&nbsp;&nbsp;[ {task.get(Key.TaskName, Key.Unknown)} ]"
-        hello = f"Sorry, Operation [{task.get(Key.Operation, Key.Unknown)}] Failed.<br>Error Message: {error}"
-    else:
-        return
-    device = Utils.get_device_info()
-    device_info = f"{device.get("device_name")} ({device.get("system")} {device.get("version")})" if device else "Unknown Device"
-    Log.info(f"device_info: {device_info}")
-    ip = Utils.get_location_into()
-    ip_info = f"{ip.get("city")} ({ip.get("country")} {ip.get("region")}) {ip.get("ip")}" if ip else "Unknown Location"
-    Log.info(f"ip_info: {ip_info}")
-    # message=(
-    #     f"DEVICE INFO:  &nbsp;{device_info}<br>"
-    #     f"IP INFO:      &nbsp;{ip_info}<br>"
-    #     f"TASK NAME:    &nbsp;{task.get(Key.TaskName, Key.Unknown)}<br>"
-    #     f"TRIGGER TYPE: &nbsp;{task.get(Key.TriggerType, Key.Unknown)}<br>"
-    #     f"OPERATION:    &nbsp;{task.get(Key.Operation, Key.Unknown)}<br>"
-    #     f"EXECUTE DAY:  &nbsp;{task.get(Key.ExecuteDay, QDate.currentDate().toString('yyyy-MM-dd'))}<br>"
-    #     f"EXECUTE TIME: &nbsp;{task.get(Key.ExecuteTime, Key.Unknown)}<br>"
-    # )
-    message = get_info_html(task, device_info, ip_info)
-    send_email_by_auto_clock(receiver_email=email, subject=subject, title=title, hello=hello, message=message, ok=ok)
 
 if __name__ == "__main__":
     task = {

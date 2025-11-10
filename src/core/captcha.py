@@ -11,7 +11,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 
 from src.utils.log import Log
-from src.utils.const import AppPath
+from src.utils.const import AppPath, WebPath
 
 # ---------------------------------------------------------------------------------------------------获取图片
 def dataurl_to_cv2(data_url):
@@ -286,7 +286,7 @@ def captcha(driver, selectors, max_attempts=3, tolerance=3):
 
         result = False
         Log.info(f"当前页面为: {driver.current_url}")
-        if driver.current_url == "https://kq.neusoft.com/":
+        if driver.current_url == WebPath.NeusoftKQPath:
             result = True
 
         # 自定义检测方法：检查成功 DOM class 或 AJAX 返回（可扩展）

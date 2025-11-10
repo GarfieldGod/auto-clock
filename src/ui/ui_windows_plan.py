@@ -133,24 +133,6 @@ class WindowsPlanDialog(QDialog):
             Log.error(e)
             MessageBox(e)
 
-    def year_changed(self):
-        self.month_sel.setCurrentIndex(0)
-        self.day_sel.setCurrentIndex(0)
-
-    def month_changed(self):
-        self.day_sel.clear()
-        if self.month_sel.currentText() in ["01", "03", "05", "07", "08", "10", "12"]:
-            day = 31
-        elif self.month_sel.currentText() == "02":
-            if QDate.isLeapYear(int(self.year_sel.currentText())):
-                day = 28
-            else:
-                day = 29
-        else:
-            day = 30
-        self.day_sel.addItems(Utils.get_nums_array(1, day))
-        self.day_sel.setCurrentIndex(0)
-
     def space_area_hide_all_content(self):
         for i in range(self.space_area.count()):
             item = self.space_area.itemAt(i)
@@ -172,6 +154,24 @@ class WindowsPlanDialog(QDialog):
             self.widget_daily_selector.show()
 
         self.adjustSize()
+
+    def year_changed(self):
+        self.month_sel.setCurrentIndex(0)
+        self.day_sel.setCurrentIndex(0)
+
+    def month_changed(self):
+        self.day_sel.clear()
+        if self.month_sel.currentText() in ["01", "03", "05", "07", "08", "10", "12"]:
+            day = 31
+        elif self.month_sel.currentText() == "02":
+            if QDate.isLeapYear(int(self.year_sel.currentText())):
+                day = 28
+            else:
+                day = 29
+        else:
+            day = 30
+        self.day_sel.addItems(Utils.get_nums_array(1, day))
+        self.day_sel.setCurrentIndex(0)
 
     def values(self):
         selected_dates = copy.deepcopy(self.calendar_selector.selected_dates)

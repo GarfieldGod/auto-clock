@@ -15,7 +15,9 @@ def check_update():
             response = requests.get(WebPath.AppConfigPathGitHub, timeout=1)
         except requests.exceptions.Timeout:
             response = requests.get(WebPath.AppConfigPathGitee, timeout=3)
+        if not response: return False
         remote_info = response.json()
+        if not remote_info: return False
         remote_ver = remote_info[0].get("version")
         Log.info(f"Current newest version: {remote_ver}")
         version = {"local": local_ver, "remote": remote_ver}

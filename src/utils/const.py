@@ -59,6 +59,8 @@ class AppPath:
 
 @dataclass
 class WebPath:
-    AppConfigPathGitee:str = "https://gitee.com/garfieldgod/auto-clock/raw/master/config.json"
-    AppConfigPathGitHub:str = "https://github.com/garfieldgod/auto-clock/raw/master/config.json"
-    AppProjectPath:str = "https://github.com/GarfieldGod/auto-clock"
+    AppConfigPathGitee: str = "https://gitee.com/garfieldgod/auto-clock/raw/master/config.json"
+    AppConfigPathGitHub: str = "https://github.com/garfieldgod/auto-clock/raw/master/config.json"
+    AppProjectPath: str = "https://github.com/GarfieldGod/auto-clock"
+    NeusoftKQPath: str = "https://kq.neusoft.com/"
+    NeusoftKQLoginPath: str = "https://kq.neusoft.com/login"

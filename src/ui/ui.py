@@ -359,7 +359,11 @@ class ConfigWindow(QMainWindow):
                         task[Key.ExecuteDay] = value.get(Key.Monthly)
                     else:
                         return
-                    task[Key.WindowsPlanName] = task[Key.TaskName] + "_Type_" + trigger_type + "_Date_" + task[Key.ExecuteDay] + "_Time_" + execute_time + "_Id_" + task_id
+                    task[Key.WindowsPlanName] = (task[Key.TaskName] +
+                                                 "_Type_" + trigger_type +
+                                                 "_Date_" +task.get(Key.ExecuteDay, Key.Unknown if trigger_type != Key.Daily else Key.Daily) +
+                                                 "_Time_" + execute_time +
+                                                 "_Id_" + task_id)
                     task[Key.WindowsPlanName] = task[Key.WindowsPlanName].replace(":", "_").replace(" ", "_").replace("-", "_")
                     ok, error = create_task(task)
                     if error:

@@ -88,7 +88,7 @@ def create_scheduled_task(
             check_cmd, shell=True, encoding="gbk", capture_output=True
         )
 
-        Log.info(check_result.stdout)
+        # Log.info(check_result.stdout)
 
         if "任务名" in check_result.stdout or result.stderr is None:
             Log.info(f"计划任务创建成功！")
@@ -247,5 +247,6 @@ def create_task(task):
             )
         return ok, None
     except Exception as e:
+        Log.error(f"Create task error: {str(e)}")
         delete_scheduled_task(task.get(Key.WindowsPlanName))
         return False, e

@@ -136,7 +136,7 @@ def get_email_message(email_subject, content_title, hello_message, content_messa
     Log.info(f"email_subject: {email_subject}")
     Log.info(f"content_title: {content_title}")
     Log.info(f"hello_message: {hello_message}")
-    Log.info(f"content_message: {content_message}")
+    # Log.info(f"content_message: {content_message}")
     Log.info(f"sender_email: {sender_email}")
     Log.info(f"receiver_email: {receiver_email}")
     msg = MIMEText(html_content(f"{content_title}",f"{hello_message}", f"{content_message}", success=success), _subtype="html", _charset="utf-8")
@@ -188,12 +188,12 @@ def send_email_by_result(task, email, send_email_success, send_email_failed, ok,
 
     if ok and send_email_success:
         subject = "Auto Clock Success"
-        title = f"SUCCESS:&nbsp;&nbsp;[{task.get(Key.TaskName, Key.Unknown)}]"
+        title = f"SUCCESS:&nbsp;&nbsp;[ {task.get(Key.TaskName, Key.Unknown)} ]"
         hello = f"Your operation [{task.get(Key.Operation, Key.Unknown)}] has completed successfully."
     elif not ok and send_email_failed:
         subject = "Auto Clock Failed"
-        title = f"FAILED:&nbsp;&nbsp;[{task.get(Key.TaskName, Key.Unknown)}]"
-        hello = f"Sorry, Operation [{task.get(Key.Operation, Key.Unknown)}] Failed.<br>Error Message: [{error}]"
+        title = f"FAILED:&nbsp;&nbsp;[ {task.get(Key.TaskName, Key.Unknown)} ]"
+        hello = f"Sorry, Operation [{task.get(Key.Operation, Key.Unknown)}] Failed.<br>Error Message: {error}"
     else:
         return
     device = Utils.get_device_info()

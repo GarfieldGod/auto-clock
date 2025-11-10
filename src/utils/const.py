@@ -1,3 +1,4 @@
+from pathlib import Path
 from dataclasses import dataclass
 
 from platformdirs import user_data_dir
@@ -53,3 +54,11 @@ class AppPath:
     ScreenshotRoot = user_data_dir("screenshot", "auto-clock")
     DataJson: str = f"{DataRoot}\\data.json"
     TasksJson: str = f"{DataRoot}\\tasks.json"
+    ProjectRoot = Path(__file__).parent.parent.parent
+    ConfigJson: str = f"{ProjectRoot}\\config.json"
+
+@dataclass
+class WebPath:
+    AppConfigPathGitee:str = "https://gitee.com/garfieldgod/auto-clock/raw/master/config.json"
+    AppConfigPathGitHub:str = "https://github.com/garfieldgod/auto-clock/raw/master/config.json"
+    AppProjectPath:str = "https://github.com/GarfieldGod/auto-clock"

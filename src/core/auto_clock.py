@@ -96,21 +96,6 @@ class AutoClock:
                 return False
 
         except Exception as e:
-            tb = traceback.extract_tb(e.__traceback__)
-            # 堆栈信息的最后一条是错误发生的位置
-            if tb:
-                last_frame = tb[-1]  # 最后一个栈帧是错误源头
-                error_file = last_frame.filename  # 错误发生的文件名
-                error_line = last_frame.lineno  # 错误发生的行号
-                error_code = last_frame.line  # 错误发生的代码行
-            else:
-                error_file = "未知文件"
-                error_line = "未知行号"
-                error_code = "未知代码"
-
-            # 记录包含错误行号的日志
-            Log.error(f"验证码验证失败：{str(e)} | 错误位置：{error_file}:{error_line} | 代码：{error_code}")
-
             info = f"验证码验证失败。请手动进行操作或重试！{e}"
             Log.error(info)
             raise Exception(info)

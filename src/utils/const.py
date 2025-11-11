@@ -1,3 +1,5 @@
+import os
+import sys
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -37,6 +39,7 @@ class Key:
     CaptchaRetryTimes: str = "captcha_retry_times"
     CaptchaToleranceAngle: str = "captcha_tolerance_angle"
     AlwaysRetry: str = "always_retry"
+    ShowWebPage: str = "show_web_page"
 
     AutoClock: str = "Auto Clock"
     ShutDownWindows: str = "Shut Down Windows"
@@ -54,7 +57,10 @@ class AppPath:
     ScreenshotRoot = user_data_dir("screenshot", "auto-clock")
     DataJson: str = f"{DataRoot}\\data.json"
     TasksJson: str = f"{DataRoot}\\tasks.json"
-    ProjectRoot = Path(__file__).parent.parent.parent
+    if hasattr(sys, '_MEIPASS'):
+        ProjectRoot = sys._MEIPASS
+    else:
+        ProjectRoot = os.path.abspath(".")
     ConfigJson: str = f"{ProjectRoot}\\config.json"
 
 @dataclass

@@ -13,8 +13,12 @@ ico = os.path.join(project_root, "icon.ico")
 # 依赖的额外文件
 extra_files = []
 drivers_dir = os.path.join(project_root, "drivers")
+config_dir = os.path.join(project_root, "config.json")
+ico_dir = os.path.join(project_root, "icon.ico")
 if os.path.exists(drivers_dir):
     extra_files.append((str(drivers_dir), "drivers"))
+    extra_files.append((str(config_dir), "."))
+    extra_files.append((str(ico_dir), "."))
 
 a = Analysis(
     [str(main_script)],

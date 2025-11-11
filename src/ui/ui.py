@@ -1,4 +1,5 @@
 import os
+import webbrowser
 from datetime import datetime
 
 from PyQt5.QtGui import QIcon
@@ -10,10 +11,11 @@ from PyQt5.QtWidgets import (
 )
 
 from src.utils.log import Log
-from src.utils.const import Key, AppPath
+from src.utils.const import Key, AppPath, WebPath
 from src.ui.ui_message import MessageBox
 from src.ui.ui_windows_plan import WindowsPlanDialog
 from src.ui.ui_windows_login import WindowsLoginDialog
+from src.utils.update import VersionCheckThread
 from src.utils.utils import Utils, QtUI
 from src.extend.auto_windows_login import auto_windows_login_on
 from src.core.clock_manager import ClockManager, run_clock, get_driver_path
@@ -57,6 +59,7 @@ class ConfigWindow(QMainWindow):
         self.always_retry_check_box = QCheckBox()
         self.send_email_success = QCheckBox()
         self.send_email_failed = QCheckBox()
+        self.show_web_page = QCheckBox()
         # Must Config
         group_user = QGroupBox("Login Config")
         group_user.setStyleSheet(self.get_group_css({"Text_Color":"#D32F2F"}))
@@ -97,9 +100,16 @@ class ConfigWindow(QMainWindow):
         layout_retry_c.setContentsMargins(0, 0, 0, 0)
         layout_retry_c.addWidget(QLabel("Tolerance Angle:"))
         layout_retry_c.addWidget(self.captcha_tolerance_angle)
+        widget_retry_d = QWidget()
+        layout_retry_d = QVBoxLayout(widget_retry_d)
+        layout_retry_d.setContentsMargins(0, 0, 0, 0)
+        layout_retry_d.addWidget(QLabel("Show Web:"))
+        layout_retry_d.addWidget(self.show_web_page)
+
         layout_retry.addWidget(widget_retry_a)
         layout_retry.addWidget(widget_retry_c)
         layout_retry.addWidget(widget_retry_b)
+        layout_retry.addWidget(widget_retry_d)
         layout_sys.addWidget(widget_retry)
 
         # Notification Config
@@ -180,6 +190,7 @@ class ConfigWindow(QMainWindow):
 
         self.load()
         self.update_windows_plan_list()
+        self.check_app_update()
 
     def write_json(self):
         retry_times = None
@@ -193,6 +204,7 @@ class ConfigWindow(QMainWindow):
             Key.UserPassword: self.user_password.text(),
             Key.DriverPath: self.driver_path.text(),
             Key.AlwaysRetry: self.always_retry_check_box.isChecked(),
+            Key.ShowWebPage: self.show_web_page.isChecked(),
             Key.SendEmailWhenFailed: self.send_email_failed.isChecked(),
             Key.SendEmailWhenSuccess: self.send_email_success.isChecked()
         }
@@ -241,6 +253,7 @@ class ConfigWindow(QMainWindow):
             self.captcha_retry_times.setText(str(data.get(Key.CaptchaRetryTimes, Key.Empty)))
             self.captcha_tolerance_angle.setText(str(data.get(Key.CaptchaToleranceAngle, Key.Empty)))
             self.always_retry_check_box.setChecked(data.get(Key.AlwaysRetry, False))
+            self.show_web_page.setChecked(data.get(Key.ShowWebPage, False))
             self.send_email_failed.setChecked(data.get(Key.SendEmailWhenFailed, False))
             self.send_email_success.setChecked(data.get(Key.SendEmailWhenSuccess, False))
             self.notification_email.setText(data.get(Key.NotificationEmail, Key.Empty))
@@ -472,3 +485,19 @@ class ConfigWindow(QMainWindow):
         except Exception as e:
             Log.error(e)
             MessageBox(e)
+
+    def check_app_update(self):
+        self.thread = VersionCheckThread()
+        self.thread.check_finished.connect(self.on_check_done)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.start()
+
+    def on_check_done(self, ok, ver):
+        if ok and ver:
+            is_update = MessageBox(
+                f"There is a new version for the app:\t\n\n"
+                f"Local: {ver.get("local")} Newest: {ver.get("remote")}\t\n\n"
+                f"Do you want to download new ?\t\n\n",
+                need_check=True, message_only=False)
+            if is_update.exec_() == QDialog.Accepted:
+                webbrowser.open_new(WebPath.AppProjectPath)

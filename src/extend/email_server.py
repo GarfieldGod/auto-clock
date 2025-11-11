@@ -65,11 +65,11 @@ def send_email_by_result(task, email, send_email_success, send_email_failed, ok,
     if not send_email_success and not send_email_failed: return
 
     if ok and send_email_success:
-        subject = "Auto Clock Success"
+        subject = "SUCCESS"
         title = f"SUCCESS:&nbsp;&nbsp;[ {task.get(Key.TaskName, Key.Unknown)} ]"
         hello = f"Your operation [{task.get(Key.Operation, Key.Unknown)}] has completed successfully."
     elif not ok and send_email_failed:
-        subject = "Auto Clock Failed"
+        subject = "FAILED"
         title = f"FAILED:&nbsp;&nbsp;[ {task.get(Key.TaskName, Key.Unknown)} ]"
         hello = f"Sorry, Operation [{task.get(Key.Operation, Key.Unknown)}] Failed.<br>Error Message: {error}"
     else:

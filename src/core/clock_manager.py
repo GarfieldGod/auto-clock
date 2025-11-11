@@ -2,6 +2,8 @@ import os
 import json
 import sys
 
+from numpy.ma.core import inner
+
 from src.utils.log import Log
 # from test.test import run_test
 from src.utils.const import Key, AppPath, WebPath
@@ -17,9 +19,12 @@ class ClockManager:
 
             with open(f"{AppPath.DataJson}", "r", encoding="utf-8") as f:
                 data = json.load(f)
+                inner_driver_path = get_driver_path()
+                if inner_driver_path:
+                    data[Key.DriverPath] = inner_driver_path
                 ok = ClockManager.check_data(data)
                 if not ok:
-                    raise Exception("Unknow Error")
+                    raise Exception("Check data error.")
                 self.user_name = data[Key.UserName]
                 self.user_password = data[Key.UserPassword]
                 self.driver_path = data[Key.DriverPath]
@@ -29,17 +34,10 @@ class ClockManager:
                     Log.error("Driver Path Error")
                     raise Exception("No driver path")
 
-                self.always_retry_check_box = data[Key.AlwaysRetry]
-                retry_times = None
-                tolerance_angle = None
-                try:
-                    retry_times = int(data.get(Key.CaptchaRetryTimes))
-                    tolerance_angle = int(data.get(Key.CaptchaToleranceAngle))
-                except Exception as e:
-                    Log.error(e)
-                self.captcha_retry_times = None if retry_times is None else retry_times
-                self.captcha_tolerance_angle = None if tolerance_angle is None else tolerance_angle
-                self.captcha_failed_email = data.get(Key.NotificationEmail)
+                self.always_retry = data.get(Key.AlwaysRetry, False)
+                self.captcha_retry_times = int(data.get(Key.CaptchaRetryTimes, 5))
+                self.captcha_tolerance_angle = int(data.get(Key.CaptchaToleranceAngle, 5))
+                self.show_web_page = data.get(Key.ShowWebPage, False)
 
                 self.status = True
         except Exception as e:
@@ -49,56 +47,46 @@ class ClockManager:
 
     def clock(self):
         config = Config(
-            self.driver_path,
-            WebPath.NeusoftKQLoginPath,
-            self.user_name,
-            self.user_password,
-            captcha_attempts=self.captcha_retry_times if self.captcha_retry_times > 0 else 5,
-            tolerance=self.captcha_tolerance_angle if self.captcha_tolerance_angle > 0 else 5,
+            driver_path=self.driver_path,
+            remote_url=WebPath.NeusoftKQLoginPath,
+            user_name=self.user_name,
+            user_password=self.user_password,
+            always_retry=self.always_retry,
+            captcha_attempts=self.captcha_retry_times,
+            tolerance=self.captcha_tolerance_angle,
+            show_web_page=self.show_web_page,
             wait_time=2,
         )
 
         auto_clock = AutoClock(config)
-        result = auto_clock.run()
+        ok, error = auto_clock.run()
         auto_clock.quit()
 
-        return result
+        return ok, error
 
     def run(self):
-        while True:
-            if not self.status:
-                return False
-            if self.clock():
-                return True
-            else:
-                self.send_email()
-
-            if not self.always_retry_check_box:
-                break
-
-        return False
-
-    def send_email(self):
-        pass
+        if not self.status:
+            return
+        self.status, self.error = self.clock()
 
     @staticmethod
     def check_data(data):
         Log.info(f"user_name: [{data[Key.UserName]}]")
-        if data[Key.UserName] == Key.Empty:
+        if data.get(Key.UserName) == Key.Empty:
             Log.error("[username] is empty.")
             raise Exception("[username] is empty.")
 
-        if data[Key.UserPassword] == Key.Empty :
+        if data.get(Key.UserPassword) == Key.Empty :
             Log.error("[password] is empty.")
             raise Exception("[password] is empty.")
 
-        if data[Key.DriverPath] == Key.Empty:
+        if data.get(Key.DriverPath) == Key.Empty:
             Log.error("[driver path] is empty.")
             raise Exception("[driver path] is empty.")
 
         if not os.path.exists(data[Key.DriverPath]):
-            Log.error("[driver path] is invalid.")
-            raise Exception("[driver path] is invalid.")
+            Log.error("[driver path] does not exist.")
+            raise Exception("[driver path] does not exist.")
 
         return True
 
@@ -106,19 +94,15 @@ def run_clock(is_test=False):
     try:
         if not is_test:
             clock = ClockManager()
-            if clock.status:
-                clock.run()
-                return True, None
-            else:
-                Log.error(clock.error)
-                return False, clock.error
+            clock.run()
+            return clock.status, clock.error
         else:
             # run_test()
             return True, None
     except Exception as e:
         return False, str(e)
 
-def get_driver_path(driver_name="Edge_Driver/msedgedriver.exe"):
+def get_driver_path(driver_name="Edge_Driver\\msedgedriver.exe"):
     if hasattr(sys, "_MEIPASS"):
         Log.info("Release mode")
         driver_dir = os.path.join(sys._MEIPASS, "drivers")

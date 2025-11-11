@@ -22,8 +22,9 @@ def login(driver, user, pwd, wait=2):
             username_el = waiter.until(EC.presence_of_element_located((By.XPATH, "//input[contains(@class,'userName') or contains(@placeholder,'用户名') or contains(@title,'用户名')]")))
             password_el = waiter.until(EC.presence_of_element_located((By.XPATH, "//input[@type='password']")))
         except TimeoutException:
-            Log.error("定位【用户名或密码输入框】失败。")
-            raise Exception("定位【用户名或密码输入框】失败。")
+            message = "定位【用户名或密码输入框】失败。"
+            Log.error(message)
+            return False, message
 
     # 填写用户名和密码
     username_el.clear()
@@ -42,7 +43,8 @@ def login(driver, user, pwd, wait=2):
             btn = waiter.until(EC.element_to_be_clickable((By.XPATH, "//input[@type='button' and (contains(@value,'登') or contains(@value,'登录') or contains(@value,'登入'))]")))
             btn.click()
         except TimeoutException:
-            Log.error("定位【登录按钮】失败，登录未执行。")
-            raise Exception("定位【登录按钮】失败，登录未执行。")
+            message = "定位【登录按钮】失败，登录未执行。"
+            Log.error(message)
+            return False, message
 
-    return True
+    return True, None

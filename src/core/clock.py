@@ -25,8 +25,8 @@ def clock(driver, sign_in_button_selector = ".kq-btn.pt43.clear a:first-child", 
                 btn.click()
             except TimeoutException:
                 Log.error("定位失败，操作未执行。")
-                return False
+                return False, "定位失败，操作未执行。"
         time.sleep(5)
-        return True
+        return True, None
     else:
-        return False
+        return False, "Clock页面验证失败"

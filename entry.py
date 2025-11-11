@@ -1,16 +1,13 @@
 import sys
 import argparse
-import webbrowser
 
-from PyQt5.QtWidgets import QApplication, QDialog
+from PyQt5.QtWidgets import QApplication
 
-from src.utils import update
 from src.utils.log import Log
 from src.utils.utils import Utils
 from src.ui.ui import ConfigWindow
-from src.ui.ui_message import MessageBox
 from src.core.clock_manager import run_clock
-from src.utils.const import Key, AppPath, WebPath
+from src.utils.const import Key, AppPath
 from src.extend.email_server import send_email_by_result
 from src.extend.auto_windows_plan import clean_invalid_windows_plan
 from src.extend.auto_windows_operation import run_windows_shutdown, run_windows_sleep
@@ -27,17 +24,6 @@ if __name__ == '__main__':
     use_gui = not any(vars(args).values())
     if use_gui:
         app = QApplication(sys.argv)
-
-        ret = update.check_update()
-        if ret and ret[0]:
-            is_update = MessageBox(
-                f"There is a new version for the app:\t\n\n"
-                f"Local: {ret[1].get("local")} Newest: {ret[1].get("remote")}\t\n\n"
-                f"Do you want to download new ?\t\n\n",
-                need_check=True, message_only=False)
-            if is_update.exec_() == QDialog.Accepted:
-                webbrowser.open_new(WebPath.AppProjectPath)
-                exit()
 
         window = ConfigWindow()
         window.show()

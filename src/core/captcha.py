@@ -247,8 +247,9 @@ def captcha(driver, selectors, max_attempts=3, tolerance=3):
         wait.until(lambda d: d.execute_script("return !!document.querySelector(arguments[0])", canvas_sel))
         Log.info(f"已定位验证码画布...")
     except Exception as e:
-        Log.error(f"验证失败, 未查询到画布:{e}")
-        return False
+        info = f"验证失败, 未查询到画布:{e}"
+        Log.error(info)
+        return False, info
 
     for attempt in range(max_attempts):
         Log.info(f"----------------------------[({attempt + 1}/{max_attempts}) 尝试获取验证码图片...]----------------------------")
@@ -296,11 +297,11 @@ def captcha(driver, selectors, max_attempts=3, tolerance=3):
             Log.info(f"----------------------------[({attempt + 1}/{max_attempts}) 验证码通过，继续后续流程]----------------------------")
             if os.path.exists(screenshot_file_path):
                 os.rename(screenshot_file_path, f"{AppPath.ScreenshotRoot}\\{screenshot_file_name + "success"}.png")
-            return True
+            return True, None
         else:
             Log.info(f"----------------------------[({attempt + 1}/{max_attempts}) 此次尝试未通过，保存截图供分析并重试]----------------------------")
             if os.path.exists(screenshot_file_path):
                 os.rename(screenshot_file_path, f"{AppPath.ScreenshotRoot}\\{screenshot_file_name + "failed"}.png")
 
     Log.error("重试结束，未通过验证码。请查看保存的截图与后端日志。")
-    return False
+    return False, "重试结束，未通过验证码。请查看保存的截图与后端日志。"

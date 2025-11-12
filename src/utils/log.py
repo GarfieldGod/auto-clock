@@ -14,7 +14,7 @@ class Log:
         if _global_log_file is None:
             log_dir = Path(AppPath.LogRoot)
             log_dir.mkdir(parents=True, exist_ok=True)
-            _global_log_path = log_dir / f"{datetime.now().strftime("%Y-%m-%d_%H_%M_%S.%f")}.log"
+            _global_log_path = log_dir / f"{datetime.now().strftime('%Y-%m-%d_%H_%M_%S.%f')}.log"
 
             _global_log_file = open(_global_log_path, 'a', encoding='utf-8')
             Log.info(f"日志文件已打开: {_global_log_path}")
@@ -48,7 +48,7 @@ def write(level: str, message: str):
         frame = stack[2]
         stack_info = f"{frame.function}:{frame.lineno}"
 
-    log_line = f"{align_str(f"{level}",7)}  {datetime.now()}    {align_str(f"{stack_info}",25)}    {message}\n"
+    log_line = f"{align_str(f'{level}',7)}  {datetime.now()}    {align_str(f'{stack_info}',25)}    {message}\n"
     print(log_line)
     if _global_log_file is None:
         return

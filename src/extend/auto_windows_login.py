@@ -28,7 +28,7 @@ def set_auto_login(username=None, password=None, enabled=False):
     :param enabled: 开启或关闭自动登录
     """
     reg_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
-    backup_file = os.path.join(AppPath.BackupRoot, f"windows_logon_backup_{datetime.now().strftime("%Y-%m-%d_%H_%M_%S.%f")}.reg")
+    backup_file = os.path.join(AppPath.BackupRoot, f"windows_logon_backup_{datetime.now().strftime('%Y-%m-%d_%H_%M_%S.%f')}.reg")
 
     if not os.path.exists(AppPath.BackupRoot):
         os.mkdir(AppPath.BackupRoot)
@@ -53,7 +53,7 @@ def set_auto_login(username=None, password=None, enabled=False):
                 Log.info(f"设置 DefaultPassword = {password}")
 
             winreg.SetValueEx(key, "AutoAdminLogon", 0, winreg.REG_SZ, "1" if enabled else "0")
-            Log.info(f"设置 AutoAdminLogon = {"1" if enabled else "0"}")
+            Log.info(f"设置 AutoAdminLogon = {'1' if enabled else '0'}")
 
         Log.info("\n自动登录配置完成！重启电脑后生效")
         Log.info(f"注册表备份文件已保存到：{backup_file}（若需恢复，双击该文件导入即可）")

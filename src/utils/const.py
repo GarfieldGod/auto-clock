@@ -44,6 +44,9 @@ class Key:
     AutoClock: str = "Auto Clock"
     ShutDownWindows: str = "Shut Down Windows"
     WindowsSleep: str = "Windows Sleep"
+    # 新增断网和联网操作类型
+    DisconnectNetwork: str = "Disconnect Network"
+    ConnectNetwork: str = "Connect Network"
 
     DefaultWindowsPlanName: str = "AutoClock_Windows_Plan"
     Unknown: str = "Unknown"

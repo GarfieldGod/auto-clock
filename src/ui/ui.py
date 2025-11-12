@@ -20,6 +20,7 @@ from src.utils.utils import Utils, QtUI
 from src.extend.auto_windows_login import auto_windows_login_on
 from src.core.clock_manager import ClockManager, run_clock, get_driver_path
 from src.extend.auto_windows_plan import create_task, delete_scheduled_task
+from src.extend.network_manager import connect_network, disconnect_network
 
 
 Text_Color = "grey"
@@ -142,6 +143,18 @@ class ConfigWindow(QMainWindow):
         self.auto_windows_login_on = QPushButton("Set Windows Auto Login")
         self.auto_windows_login_on.clicked.connect(self.auto_login_windows)
         layout_plan_list.addWidget(self.auto_windows_login_on)
+        
+        # 添加网络控制按钮
+        widget_network_control = QWidget()
+        layout_network_control = QHBoxLayout(widget_network_control)
+        self.button_disconnect_network = QPushButton("Disconnect Network")
+        self.button_disconnect_network.clicked.connect(self.disconnect_network_now)
+        self.button_connect_network = QPushButton("Connect Network")
+        self.button_connect_network.clicked.connect(self.connect_network_now)
+        layout_network_control.addWidget(self.button_disconnect_network)
+        layout_network_control.addWidget(self.button_connect_network)
+        layout_plan_list.addWidget(widget_network_control)
+        
         self.widget_plan_list = QListWidget()
         layout_plan_list.addWidget(QLabel("Windows Plan List:"))
         layout_plan_list.addWidget(self.widget_plan_list)
@@ -271,6 +284,28 @@ class ConfigWindow(QMainWindow):
         except Exception as e:
             MessageBox(f"Try Failed!\nError: {e}")
         run_clock()
+    
+    # 添加断网功能
+    def disconnect_network_now(self):
+        try:
+            success, error = disconnect_network()
+            if success:
+                MessageBox("Network disconnected successfully!")
+            else:
+                MessageBox(f"Failed to disconnect network: {error}")
+        except Exception as e:
+            MessageBox(f"Error disconnecting network: {str(e)}")
+    
+    # 添加联网功能
+    def connect_network_now(self):
+        try:
+            success, error = connect_network()
+            if success:
+                MessageBox("Network connected successfully!")
+            else:
+                MessageBox(f"Failed to connect network: {error}")
+        except Exception as e:
+            MessageBox(f"Error connecting network: {str(e)}")
 
     def get_group_css(self, css_data):
         background_color = css_data["BackGround_Color"] if css_data.get("BackGround_Color") is not None and css_data["BackGround_Color"] != Key.Empty else BackGround_Color

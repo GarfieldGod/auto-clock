@@ -13,10 +13,15 @@ from src.ui.ui import ConfigWindow
 from src.core.clock_manager import run_clock
 from src.utils.const import Key, AppPath
 from src.extend.email_server import send_email_by_result
-from src.extend.network_manager import disconnect_network, connect_network
+
+# 根据操作系统选择正确的网络管理模块
+system_name = os.name
+if system_name == 'nt':  # Windows
+    from src.extend.network_manager import disconnect_network, connect_network
+else:  # Linux
+    from src.extend.auto_linux_network import disconnect_network, connect_network
 
 # 根据操作系统类型导入相应的模块
-system_name = os.name
 if system_name == 'nt':  # Windows
     from src.extend.auto_windows_plan import clean_invalid_windows_plan
     from src.extend.auto_windows_operation import run_windows_shutdown, run_windows_sleep
@@ -25,13 +30,13 @@ else:  # Linux和其他系统
     try:
         from src.extend.auto_linux_operation import run_linux_shutdown as run_windows_shutdown
         from src.extend.auto_linux_operation import run_linux_sleep as run_windows_sleep
-        # 之后可以添加Linux计划任务管理模块
-        def clean_invalid_windows_plan():
-            Log.info("Linux系统无需清理Windows计划任务")
+        from src.extend.auto_linux_plan import clean_invalid_linux_plan as clean_invalid_windows_plan
     except ImportError:
         # 定义Linux系统的相应函数占位符
         def clean_invalid_windows_plan():
-            Log.info("Linux系统无需清理Windows计划任务")
+            Log.info("Linux系统清理无效计划任务")
+            # 这里可以实现基本的清理逻辑
+            return True, None
         
         def run_windows_shutdown(delay=30):
             Log.info(f"Linux系统执行关机操作，延迟{delay}秒")
@@ -86,8 +91,10 @@ if __name__ == '__main__':
                 elif operation == Key.WindowsSleep:
                     ok, error = run_windows_sleep(30)
                 elif operation == Key.DisconnectNetwork:
+                    # 对于断网操作，Windows和Linux都支持延迟参数
                     ok, error = disconnect_network(30)
                 elif operation == Key.ConnectNetwork:
+                    # 对于联网操作，通常不需要延迟
                     ok, error = connect_network()
                 else:
                     error = f"No operation specified for: {operation}"

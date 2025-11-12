@@ -29,7 +29,7 @@ def create_scheduled_task(
     run_as_admin: bool = True
     exe_path = Utils.get_execute_file()
     if not exe_path: raise Exception("Can't get execute file path.")
-    operation = f'"{exe_path}" --task_id={task_id}'
+    operation = f'{exe_path} --task_id={task_id}'
 
     cmd = [
         "schtasks", "/create",

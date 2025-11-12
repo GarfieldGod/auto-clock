@@ -14,7 +14,7 @@ from src.ui.ui_message import MessageBox
 
 class WindowsPlanDialog(QDialog):
     trigger_types = [Key.Once, Key.Multiple, Key.Daily, Key.Weekly, Key.Monthly]
-    operation_types = [Key.AutoClock, Key.ShutDownWindows, Key.WindowsSleep]
+    operation_types = [Key.AutoClock, Key.ShutDownWindows, Key.WindowsSleep, Key.DisconnectNetwork, Key.ConnectNetwork]
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -165,9 +165,9 @@ class WindowsPlanDialog(QDialog):
             day = 31
         elif self.month_sel.currentText() == "02":
             if QDate.isLeapYear(int(self.year_sel.currentText())):
-                day = 28
-            else:
                 day = 29
+            else:
+                day = 28
         else:
             day = 30
         self.day_sel.addItems(Utils.get_nums_array(1, day))

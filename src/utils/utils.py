@@ -132,7 +132,9 @@ class Utils:
                 raise Exception(message)
             return str(exe_path)
         else:
-            return f'{Path(__file__).parent.parent.parent / ".venv/Scripts/python.exe"}" {Path(__file__).parent.parent.parent / "entry.py"}'
+            python_exe = Path(__file__).parent.parent.parent / ".venv/Scripts/python.exe"
+            entry_script = Path(__file__).parent.parent.parent / "entry.py"
+            return f'"{python_exe}" "{entry_script}"'
 
 class QtUI:
     @staticmethod

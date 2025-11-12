@@ -144,17 +144,6 @@ class ConfigWindow(QMainWindow):
         self.auto_windows_login_on.clicked.connect(self.auto_login_windows)
         layout_plan_list.addWidget(self.auto_windows_login_on)
         
-        # 添加网络控制按钮
-        widget_network_control = QWidget()
-        layout_network_control = QHBoxLayout(widget_network_control)
-        self.button_disconnect_network = QPushButton("Disconnect Network")
-        self.button_disconnect_network.clicked.connect(self.disconnect_network_now)
-        self.button_connect_network = QPushButton("Connect Network")
-        self.button_connect_network.clicked.connect(self.connect_network_now)
-        layout_network_control.addWidget(self.button_disconnect_network)
-        layout_network_control.addWidget(self.button_connect_network)
-        layout_plan_list.addWidget(widget_network_control)
-        
         self.widget_plan_list = QListWidget()
         layout_plan_list.addWidget(QLabel("Windows Plan List:"))
         layout_plan_list.addWidget(self.widget_plan_list)

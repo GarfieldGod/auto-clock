@@ -149,9 +149,31 @@ def clean_invalid_windows_plan():
 
     Utils.write_dict_to_file(AppPath.TasksJson, dict_list)
 
+def is_task_invalid(task_name: str):
+    """检查任务是否失效（不存在或无法访问）"""
+    try:
+        result = subprocess.run(
+            ["schtasks", "/query", "/tn", task_name],
+            shell=True, encoding="gbk", capture_output=True
+        )
+        # 如果返回码不为0或者输出中包含特定的错误信息，表示任务不存在或失效
+        if result.returncode != 0 or "找不到指定的任务" in result.stderr or "not found" in result.stderr:
+            Log.info(f"任务不存在或已失效：{task_name}")
+            return True
+        return False
+    except Exception as e:
+        # 发生异常也视为任务失效
+        Log.info(f"检查任务状态时出错（视为失效）：{str(e)}")
+        return True
+
 def delete_scheduled_task(task_name: str):
     """删除计划任务"""
     try:
+        # 首先检查任务是否已经失效
+        if is_task_invalid(task_name):
+            Log.info(f"任务已失效，视为删除成功：{task_name}")
+            return True, None
+            
         Log.info(f"Delete plan: {task_name}")
         result = subprocess.run(
             ["schtasks", "/delete", "/tn", task_name, "/f"],
@@ -161,10 +183,18 @@ def delete_scheduled_task(task_name: str):
             Log.info(f"已删除计划任务：{task_name}")
             return True, None
         else:
+            # 如果删除失败，但错误信息表明任务不存在，也视为成功
+            if "找不到指定的任务" in result.stderr or "not found" in result.stderr:
+                Log.info(f"删除时发现任务不存在，视为删除成功：{task_name}")
+                return True, None
             message = f"Delete task failed: {result.stderr.strip()}"
             Log.info(message)
             return False, message
     except Exception as e:
+        # 如果异常信息表明任务不存在，也视为成功
+        if "找不到指定的任务" in str(e) or "not found" in str(e):
+            Log.info(f"删除时发生异常但任务不存在，视为删除成功：{task_name}")
+            return True, None
         message = f"Delete task error: {str(e)}"
         Log.error(message)
         return False, message

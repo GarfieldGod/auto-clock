@@ -496,7 +496,7 @@ class ConfigWindow(QMainWindow):
         if ok and ver:
             is_update = MessageBox(
                 f"There is a new version for the app:\t\n\n"
-                f"Local: {ver.get("local")} Newest: {ver.get("remote")}\t\n\n"
+                f"Local: {ver.get('local')} Newest: {ver.get('remote')}\t\n\n"
                 f"Do you want to download new ?\t\n\n",
                 need_check=True, message_only=False)
             if is_update.exec_() == QDialog.Accepted:

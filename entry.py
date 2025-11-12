@@ -11,6 +11,7 @@ from src.utils.const import Key, AppPath
 from src.extend.email_server import send_email_by_result
 from src.extend.auto_windows_plan import clean_invalid_windows_plan
 from src.extend.auto_windows_operation import run_windows_shutdown, run_windows_sleep
+from src.extend.network_manager import disconnect_network, connect_network
 
 if __name__ == '__main__':
     Log.open()
@@ -57,8 +58,12 @@ if __name__ == '__main__':
                     ok, error = run_windows_shutdown(30)
                 elif operation == Key.WindowsSleep:
                     ok, error = run_windows_sleep(30)
+                elif operation == Key.DisconnectNetwork:
+                    ok, error = disconnect_network(30)
+                elif operation == Key.ConnectNetwork:
+                    ok, error = connect_network()
                 else:
-                    error = "No operation specified."
+                    error = f"No operation specified for: {operation}"
 
                 Log.info("Finish Task.")
             else:

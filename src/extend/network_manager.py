@@ -16,7 +16,7 @@ def disconnect_network(delay_seconds=0):
         try:
             # 创建并启动线程来延迟执行断网操作
             disconnect_thread = threading.Thread(
-                target=disconnect_network_after_delay,
+                target=_disconnect_network_after_delay,
                 args=(delay_seconds,),
                 daemon=False
             )
@@ -29,7 +29,7 @@ def disconnect_network(delay_seconds=0):
         # 立即执行断网操作
         return _disconnect_network_impl()
 
-def disconnect_network_after_delay(delay_seconds):
+def _disconnect_network_after_delay(delay_seconds):
     """
     延迟执行断网操作的后台函数
     

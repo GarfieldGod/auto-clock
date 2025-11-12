@@ -14,7 +14,7 @@ def check_update():
         return False
     Log.info(AppPath.ConfigJson)
     config_dict = Utils.read_dict_from_json(AppPath.ConfigJson)
-    # if not config_dict: return False
+    if not config_dict: return False
     local_ver = config_dict[0].get("version")
     Log.info(f"Current local version: {local_ver}")
     if not local_ver: return False

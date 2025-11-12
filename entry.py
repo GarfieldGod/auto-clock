@@ -24,28 +24,18 @@ if __name__ == '__main__':
     use_gui = not any(vars(args).values())
     if use_gui:
         app = QApplication(sys.argv)
-
         window = ConfigWindow()
         window.show()
         app.exec_()
 
     else:
-        config_data = Utils.read_dict_from_json(AppPath.DataJson)
-        send_email_success = False
-        send_email_failed = False
-        email = None
-        if config_data and config_data.get(Key.NotificationEmail):
-            email = config_data.get(Key.NotificationEmail)
-            send_email_success = config_data.get(Key.SendEmailWhenSuccess, False)
-            send_email_failed = config_data.get(Key.SendEmailWhenFailed, False)
-
         ok = False
         error = None
         task = None
         try:
             if args.task_id:
                 task = Utils.find_task(args.task_id)
-                Log.info(f"Auto Clock Get Task Id: {task}")
+                Log.info(f"Auto Clock Get Task Id: {args.task_id}")
                 if not task:
                     raise Exception(f"Task ID: {args.task_id} not found.")
                 operation = task.get(Key.Operation)
@@ -65,6 +55,13 @@ if __name__ == '__main__':
                 exit()
         except Exception as e:
             error = str(e)
+
+        config_data = Utils.read_dict_from_json(AppPath.DataJson)
+        if not config_data or not config_data.get(Key.NotificationEmail): exit()
+
+        email = config_data.get(Key.NotificationEmail)
+        send_email_success = config_data.get(Key.SendEmailWhenSuccess, False)
+        send_email_failed = config_data.get(Key.SendEmailWhenFailed, False)
 
         if not error: error = "Unknow Error"
         Log.info(f"task: {task}")

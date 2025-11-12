@@ -27,6 +27,8 @@ if platform.system() == 'Windows':
     from src.extend.auto_windows_plan import create_task, delete_scheduled_task
 elif platform.system() == 'Linux':
     from src.ui.ui_linux_login import LinuxLoginDialog
+    from src.ui.ui_linux_plan import LinuxPlanDialog
+    from src.extend.auto_linux_plan import create_crontab_task, delete_crontab_task
 else:
     # 其他系统暂不支持特定功能
     pass
@@ -189,7 +191,7 @@ class ConfigWindow(QMainWindow):
             layout_system.addWidget(widget_plan_list_buttons)
         elif system_name == 'Linux':
             # Linux特定配置
-            self.auto_linux_login_on = QPushButton("设置Linux自动登录")
+            self.auto_linux_login_on = QPushButton("Set Linux Auto Login")
             self.auto_linux_login_on.clicked.connect(self.auto_login_linux)
             layout_system.addWidget(self.auto_linux_login_on)
             # 添加提示标签
@@ -197,6 +199,31 @@ class ConfigWindow(QMainWindow):
             tip_label.setStyleSheet("color: orange; font-size: 12px;")
             tip_label.setWordWrap(True)
             layout_system.addWidget(tip_label)
+            
+            # Linux计划任务功能
+            self.widget_linux_plan_list = QListWidget()
+            layout_system.addWidget(QLabel("Linux Plan List:"))
+            layout_system.addWidget(self.widget_linux_plan_list)
+            widget_linux_plan_buttons = QWidget()
+            self.button_linux_create = QPushButton("Create")
+            self.button_linux_create.clicked.connect(self.create_linux_plan)
+            self.button_linux_delete = QPushButton("Delete")
+            self.button_linux_delete.clicked.connect(self.delete_linux_plan)
+            layout_linux_plan_buttons = QHBoxLayout(widget_linux_plan_buttons)
+            layout_linux_plan_buttons.addWidget(self.button_linux_create)
+            layout_linux_plan_buttons.addWidget(self.button_linux_delete)
+            layout_system.addWidget(widget_linux_plan_buttons)
+            
+            # 添加Linux网络控制按钮
+            self.button_disconnect_network = QPushButton("立即断网")
+            self.button_disconnect_network.clicked.connect(self.disconnect_network_now)
+            self.button_connect_network = QPushButton("立即联网")
+            self.button_connect_network.clicked.connect(self.connect_network_now)
+            network_buttons_widget = QWidget()
+            network_buttons_layout = QHBoxLayout(network_buttons_widget)
+            network_buttons_layout.addWidget(self.button_disconnect_network)
+            network_buttons_layout.addWidget(self.button_connect_network)
+            layout_system.addWidget(network_buttons_widget)
 
 
         # Confirm or Try
@@ -233,7 +260,10 @@ class ConfigWindow(QMainWindow):
         self.button_try.clicked.connect(self.try_now)
 
         self.load()
-        self.update_windows_plan_list()
+        if system_name == 'Windows':
+            self.update_windows_plan_list()
+        elif system_name == 'Linux':
+            self.update_linux_plan_list()
         self.check_app_update()
 
     def write_json(self):
@@ -392,6 +422,173 @@ class ConfigWindow(QMainWindow):
             dlg.exec_()
             # 重新加载配置
             self.load()
+    
+    def create_linux_plan(self):
+        try:
+            if platform.system() != 'Linux':
+                return
+                
+            plan_ui = LinuxPlanDialog(self)
+            if plan_ui.exec_() == QDialog.Accepted:
+                value = plan_ui.values()
+                Log.info(f"create linux plan value: {value}")
+                plan_name = value.get(Key.WindowsPlanName)
+                operation = value.get(Key.Operation)
+                trigger_type = value.get(Key.TriggerType)
+                execute_time = value.get(Key.ExecuteTime)
+                
+                if not value or not trigger_type or not operation:
+                    return
+
+                task_id = datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
+                is_no_name = plan_name is None or plan_name == Key.Empty or plan_name == Key.DefaultWindowsPlanName
+                task = {
+                    Key.TaskName: Key.DefaultWindowsPlanName if is_no_name else plan_name,
+                    Key.TaskID: task_id,
+                    Key.Operation: operation,
+                    Key.TriggerType: trigger_type,
+                    Key.ExecuteTime: execute_time,
+                    Key.Hour: value.get(Key.Hour),
+                    Key.Minute: value.get(Key.Minute)
+                }
+                
+                # 对于Linux crontab任务，我们需要保存ExecuteDay
+                execute_day = value.get(Key.ExecuteDay)
+                if execute_day:
+                    task[Key.ExecuteDay] = execute_day
+                
+                # 生成crontab任务名称
+                task_name = (task[Key.TaskName] + 
+                            "_Type_" + trigger_type + 
+                            "_Time_" + execute_time + 
+                            "_Id_" + task_id)
+                task_name = task_name.replace(":", "_").replace(" ", "_").replace("-", "_")
+                task["LinuxPlanName"] = task_name
+                
+                # 创建crontab任务
+                ok, error = create_crontab_task(task)
+                if error:
+                    raise Exception(error)
+                else:
+                    MessageBox(f"创建任务: {task[Key.TaskName]} 成功!")
+                    
+                # 保存任务信息
+                self.add_linux_plan(task)
+                Log.info(f"create linux plan task: {task}")
+        except Exception as e:
+            Log.error(str(e))
+            MessageBox(str(e))
+    
+    def update_linux_plan_list(self):
+        try:
+            if platform.system() != 'Linux':
+                return
+                
+            dict_list = Utils.read_dict_from_json(AppPath.TasksJson)
+            if dict_list is None:
+                # 如果文件不存在，创建空列表
+                Utils.write_dict_to_file(AppPath.TasksJson, [])
+                return
+
+            self.widget_linux_plan_list.clear()
+            if isinstance(dict_list, list):
+                self.task_list = dict_list
+                for plan_dict in self.task_list:
+                    self.add_linux_plan_ui(plan_dict)
+            elif isinstance(dict_list, dict):
+                self.task_list.append(dict_list)
+                self.add_linux_plan_ui(dict_list)
+            else:
+                raise Exception("加载任务失败!")
+
+        except Exception as e:
+            message = f"更新Linux计划任务列表失败: {e}"
+            Log.error(message)
+            MessageBox(message)
+    
+    def add_linux_plan(self, task):
+        self.task_list.append(task)
+        Utils.write_dict_to_file(AppPath.TasksJson, self.task_list)
+        self.update_linux_plan_list()
+    
+    def add_linux_plan_ui(self, task):
+        widget_plan_line = QWidget()
+        widget_plan_line.setObjectName(task[Key.TaskID])
+        layout_plan_line = QHBoxLayout(widget_plan_line)
+        layout_plan_line.setContentsMargins(0, 0, 0, 0)
+        layout_plan_line.setAlignment(Qt.AlignCenter | Qt.AlignLeft)
+        front_size = 8
+        label_alignment = Qt.AlignLeft
+        label_p = QtUI.create_label(Utils.truncate_text(task[Key.TaskName], 15), size=front_size, fixed_width=140)
+        layout_plan_line.addWidget(label_p)
+        label_o = QtUI.create_label(Utils.truncate_text(task[Key.Operation], 10), size=front_size, alignment=label_alignment, fixed_width=80)
+        layout_plan_line.addWidget(label_o)
+        label_t = QtUI.create_label(task[Key.TriggerType], size=front_size, alignment=label_alignment, fixed_width=50)
+        layout_plan_line.addWidget(label_t)
+        label_et = QtUI.create_label(task[Key.ExecuteTime], size=front_size, alignment=Qt.AlignCenter, fixed_width=50)
+        layout_plan_line.addWidget(label_et)
+        
+        # 显示执行日期（如果有）
+        if Key.ExecuteDay in task:
+            layout_plan_line.addWidget(QtUI.create_label(str(task[Key.ExecuteDay]), size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
+        else:
+            layout_plan_line.addWidget(QtUI.create_label("每日", size=front_size, alignment=Qt.AlignCenter, fixed_width=80))
+        
+        item = QListWidgetItem()
+        item.setSizeHint(QSize(0, 40))
+        self.widget_linux_plan_list.addItem(item)
+        self.widget_linux_plan_list.setItemWidget(item, widget_plan_line)
+    
+    def delete_linux_plan(self):
+        try:
+            if platform.system() != 'Linux':
+                return
+                
+            selected_item = self.widget_linux_plan_list.currentItem()
+            if not selected_item:
+                MessageBox("请先选择要删除的计划任务")
+                return
+                
+            selected_widget = self.widget_linux_plan_list.itemWidget(selected_item)
+            if not selected_widget:
+                Log.error("选中项未绑定任务")
+                return
+
+            plan_id = selected_widget.objectName()
+            Log.info(f"删除任务: {plan_id}")
+
+            delete_task = None
+            for task in self.task_list:
+                if task[Key.TaskID] == plan_id:
+                    delete_task = task
+                    break
+            if delete_task is None:
+                raise Exception(f"删除任务失败，未找到任务ID: {plan_id}")
+            
+            short_name = delete_task[Key.TaskName]
+            plan_name = delete_task.get("LinuxPlanName")
+            
+            if not plan_name:
+                raise Exception("任务名称未找到")
+                
+            dlg = MessageBox(f"\n您确定要删除此任务吗:\n\n{short_name}\n", need_check=True, message_only=False, message_name="删除任务")
+            if dlg.exec_() != QDialog.Accepted:
+                return
+
+            # 删除crontab任务
+            ok, error = delete_crontab_task(plan_name)
+            if not ok:
+                raise Exception(error)
+                
+            # 从本地列表中删除
+            self.task_list.remove(delete_task)
+            Utils.write_dict_to_file(AppPath.TasksJson, self.task_list)
+            self.update_linux_plan_list()
+            MessageBox(f"删除任务: {short_name} 成功!")
+
+        except Exception as e:
+            Log.error(e)
+            MessageBox(str(e))
 
     def create_windows_plan(self):
         try:

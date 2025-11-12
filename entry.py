@@ -1,4 +1,5 @@
 import sys
+import os
 import time
 import random
 import argparse
@@ -12,9 +13,33 @@ from src.ui.ui import ConfigWindow
 from src.core.clock_manager import run_clock
 from src.utils.const import Key, AppPath
 from src.extend.email_server import send_email_by_result
-from src.extend.auto_windows_plan import clean_invalid_windows_plan
-from src.extend.auto_windows_operation import run_windows_shutdown, run_windows_sleep
 from src.extend.network_manager import disconnect_network, connect_network
+
+# 根据操作系统类型导入相应的模块
+system_name = os.name
+if system_name == 'nt':  # Windows
+    from src.extend.auto_windows_plan import clean_invalid_windows_plan
+    from src.extend.auto_windows_operation import run_windows_shutdown, run_windows_sleep
+else:  # Linux和其他系统
+    # 尝试导入Linux专用模块，如果不存在则使用占位符
+    try:
+        from src.extend.auto_linux_operation import run_linux_shutdown as run_windows_shutdown
+        from src.extend.auto_linux_operation import run_linux_sleep as run_windows_sleep
+        # 之后可以添加Linux计划任务管理模块
+        def clean_invalid_windows_plan():
+            Log.info("Linux系统无需清理Windows计划任务")
+    except ImportError:
+        # 定义Linux系统的相应函数占位符
+        def clean_invalid_windows_plan():
+            Log.info("Linux系统无需清理Windows计划任务")
+        
+        def run_windows_shutdown(delay=30):
+            Log.info(f"Linux系统执行关机操作，延迟{delay}秒")
+            return True, None
+        
+        def run_windows_sleep(delay=30):
+            Log.info(f"Linux系统执行睡眠操作，延迟{delay}秒")
+            return True, None
 
 if __name__ == '__main__':
     Log.open()

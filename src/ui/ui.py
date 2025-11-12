@@ -1,4 +1,5 @@
 import os
+import platform
 import webbrowser
 from datetime import datetime
 
@@ -13,14 +14,22 @@ from PyQt5.QtWidgets import (
 from src.utils.log import Log
 from src.utils.const import Key, AppPath, WebPath
 from src.ui.ui_message import MessageBox
-from src.ui.ui_windows_plan import WindowsPlanDialog
-from src.ui.ui_windows_login import WindowsLoginDialog
 from src.utils.update import VersionCheckThread
 from src.utils.utils import Utils, QtUI
-from src.extend.auto_windows_login import auto_windows_login_on
 from src.core.clock_manager import ClockManager, run_clock, get_driver_path
-from src.extend.auto_windows_plan import create_task, delete_scheduled_task
 from src.extend.network_manager import connect_network, disconnect_network
+
+# 根据操作系统导入相应的模块
+if platform.system() == 'Windows':
+    from src.ui.ui_windows_plan import WindowsPlanDialog
+    from src.ui.ui_windows_login import WindowsLoginDialog
+    from src.extend.auto_windows_login import auto_windows_login_on
+    from src.extend.auto_windows_plan import create_task, delete_scheduled_task
+elif platform.system() == 'Linux':
+    from src.ui.ui_linux_login import LinuxLoginDialog
+else:
+    # 其他系统暂不支持特定功能
+    pass
 
 
 Text_Color = "grey"
@@ -154,27 +163,41 @@ class ConfigWindow(QMainWindow):
         layout_notification.addLayout(layout_email)
         layout_notification.addLayout(layout_send_email)
 
-        # Windows Config
-        group_windows = QGroupBox("Windows Config")
-        group_windows.setStyleSheet(self.get_group_css({}))
-        layout_plan_list = QVBoxLayout(group_windows)
+        # 系统配置 - 根据操作系统显示不同的配置选项
+        system_name = platform.system()
+        group_system = QGroupBox(f"{system_name} Config")
+        group_system.setStyleSheet(self.get_group_css({}))
+        layout_system = QVBoxLayout(group_system)
 
-        self.auto_windows_login_on = QPushButton("Set Windows Auto Login")
-        self.auto_windows_login_on.clicked.connect(self.auto_login_windows)
-        layout_plan_list.addWidget(self.auto_windows_login_on)
-        
-        self.widget_plan_list = QListWidget()
-        layout_plan_list.addWidget(QLabel("Windows Plan List:"))
-        layout_plan_list.addWidget(self.widget_plan_list)
-        widget_plan_list_buttons = QWidget()
-        self.button_create = QPushButton("Create")
-        self.button_create.clicked.connect(self.create_windows_plan)
-        self.button_delete = QPushButton("Delete")
-        self.button_delete.clicked.connect(self.delete_windows_plan)
-        layout_plan_list_buttons = QHBoxLayout(widget_plan_list_buttons)
-        layout_plan_list_buttons.addWidget(self.button_create)
-        layout_plan_list_buttons.addWidget(self.button_delete)
-        layout_plan_list.addWidget(widget_plan_list_buttons)
+        if system_name == 'Windows':
+            # Windows特定配置
+            self.auto_windows_login_on = QPushButton("Set Windows Auto Login")
+            self.auto_windows_login_on.clicked.connect(self.auto_login_windows)
+            layout_system.addWidget(self.auto_windows_login_on)
+            
+            self.widget_plan_list = QListWidget()
+            layout_system.addWidget(QLabel("Windows Plan List:"))
+            layout_system.addWidget(self.widget_plan_list)
+            widget_plan_list_buttons = QWidget()
+            self.button_create = QPushButton("Create")
+            self.button_create.clicked.connect(self.create_windows_plan)
+            self.button_delete = QPushButton("Delete")
+            self.button_delete.clicked.connect(self.delete_windows_plan)
+            layout_plan_list_buttons = QHBoxLayout(widget_plan_list_buttons)
+            layout_plan_list_buttons.addWidget(self.button_create)
+            layout_plan_list_buttons.addWidget(self.button_delete)
+            layout_system.addWidget(widget_plan_list_buttons)
+        elif system_name == 'Linux':
+            # Linux特定配置
+            self.auto_linux_login_on = QPushButton("设置Linux自动登录")
+            self.auto_linux_login_on.clicked.connect(self.auto_login_linux)
+            layout_system.addWidget(self.auto_linux_login_on)
+            # 添加提示标签
+            tip_label = QLabel("提示：Linux自动登录功能需要管理员权限运行应用")
+            tip_label.setStyleSheet("color: orange; font-size: 12px;")
+            tip_label.setWordWrap(True)
+            layout_system.addWidget(tip_label)
+
 
         # Confirm or Try
         widget_confirm = QWidget()
@@ -202,7 +225,7 @@ class ConfigWindow(QMainWindow):
         layout_global.addWidget(group_user)
         layout_global.addWidget(group_sys)
         layout_global.addWidget(group_notification)
-        layout_global.addWidget(group_windows)
+        layout_global.addWidget(group_system)
         layout_global.addWidget(widget_confirm)
         self.setCentralWidget(widget_global)
 # 功能---------------------------------------------------------------------------------------------
@@ -357,18 +380,18 @@ class ConfigWindow(QMainWindow):
         return css
 
     def auto_login_windows(self):
-        dlg = WindowsLoginDialog(self)
-        if dlg.exec_() == QDialog.Accepted:
-            name, password = dlg.values()
-            if not name or not name.strip():
-                return
-        else:
-            return
-        try:
-            backup_path = auto_windows_login_on(name, password)
-            MessageBox(f"Set Windows Auto Login Success!\nwindows config backup path: {backup_path}")
-        except Exception as e:
-            MessageBox(f"Set Windows Auto Login Failed!\nError: {e}")
+        if platform.system() == 'Windows':
+            dlg = WindowsLoginDialog(self)
+            dlg.exec_()
+            # 重新加载配置
+            self.load()
+    
+    def auto_login_linux(self):
+        if platform.system() == 'Linux':
+            dlg = LinuxLoginDialog(self)
+            dlg.exec_()
+            # 重新加载配置
+            self.load()
 
     def create_windows_plan(self):
         try:

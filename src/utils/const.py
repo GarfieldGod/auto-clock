@@ -66,13 +66,13 @@ class AppPath:
     DataRoot = user_data_dir("data", "auto-clock")
     BackupRoot = user_data_dir("backup", "auto-clock")
     ScreenshotRoot = user_data_dir("screenshot", "auto-clock")
-    DataJson: str = f"{DataRoot}\\data.json"
-    TasksJson: str = f"{DataRoot}\\tasks.json"
+    DataJson: str = os.path.join(DataRoot, "data.json")
+    TasksJson: str = os.path.join(DataRoot, "tasks.json")
     if hasattr(sys, '_MEIPASS'):
         ProjectRoot = sys._MEIPASS
     else:
         ProjectRoot = os.path.abspath(".")
-    ConfigJson: str = f"{ProjectRoot}\\config.json"
+    ConfigJson: str = os.path.join(ProjectRoot, "config.json")
 
 @dataclass
 class WebPath:

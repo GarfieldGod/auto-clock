@@ -53,6 +53,17 @@ class ConfigWindow(QMainWindow):
         # User Information
         self.user_name = QLineEdit()
         self.user_password = QLineEdit()
+        self.user_password.setEchoMode(QLineEdit.Password)  # 设置密码框隐藏输入
+        
+        # 创建密码可见性切换按钮
+        self.show_password_btn = QPushButton()
+        self.show_password_btn.setFixedSize(24, 24)
+        self.show_password_btn.setStyleSheet("border: none; background-color: transparent;")
+        
+        # 使用锁图标作为默认状态（密码隐藏）
+        self.show_password_btn.setText("🔒")
+        self.show_password_btn.setToolTip("显示密码")
+        self.show_password_btn.clicked.connect(self.toggle_password_visibility)
         self.captcha_retry_times = QLineEdit()
         self.notification_email = QLineEdit()
         self.captcha_tolerance_angle = QLineEdit()
@@ -68,9 +79,17 @@ class ConfigWindow(QMainWindow):
         layout_username = QVBoxLayout()
         layout_username.addWidget(QLabel("UserName:"))
         layout_username.addWidget(self.user_name)
+        # 创建密码输入的垂直布局
         layout_password = QVBoxLayout()
         layout_password.addWidget(QLabel("Password:"))
-        layout_password.addWidget(self.user_password)
+        
+        # 创建水平布局来容纳密码输入框和眼睛图标按钮
+        password_input_layout = QHBoxLayout()
+        password_input_layout.addWidget(self.user_password)
+        password_input_layout.addWidget(self.show_password_btn)
+        password_input_layout.setContentsMargins(0, 0, 0, 0)
+        
+        layout_password.addLayout(password_input_layout)
         layout_user = QVBoxLayout()
         layout_user.addLayout(layout_username)
         layout_user.addLayout(layout_password)
@@ -275,6 +294,19 @@ class ConfigWindow(QMainWindow):
         run_clock()
     
     # 添加断网功能
+    def toggle_password_visibility(self):
+        """切换密码可见性"""
+        if self.user_password.echoMode() == QLineEdit.Password:
+            # 显示密码 - 使用普通眼睛图标
+            self.user_password.setEchoMode(QLineEdit.Normal)
+            self.show_password_btn.setText("👁")
+            self.show_password_btn.setToolTip("隐藏密码")
+        else:
+            # 隐藏密码 - 使用闭眼睛+斜杠图标
+            self.user_password.setEchoMode(QLineEdit.Password)
+            self.show_password_btn.setText("🔒")
+            self.show_password_btn.setToolTip("显示密码")
+            
     def disconnect_network_now(self):
         try:
             success, error = disconnect_network()

@@ -2,9 +2,9 @@ name: Unittest Check
 
 on:
   push:
-    branches: [ master, dev_* ]
+    branches: [ master, dev, dev_* ]
   pull_request:
-    branches: [ master, dev_* ]
+    branches: [ master, dev, dev_* ]
 
 jobs:
   test:

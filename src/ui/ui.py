@@ -780,7 +780,7 @@ class ConfigWindow(QMainWindow):
         self.thread.start()
 
     def on_check_done(self, ok, ver):
-        if ok and ver:
+        if ok and ver and ver.get('local') and ver.get('remote'):
             is_update = MessageBox(
                 f"There is a new version for the app:\t\n\n"
                 f"Local: {ver.get('local')} Newest: {ver.get('remote')}\t\n\n"
@@ -788,3 +788,7 @@ class ConfigWindow(QMainWindow):
                 need_check=True, message_only=False)
             if is_update.exec_() == QDialog.Accepted:
                 webbrowser.open_new(WebPath.AppProjectPath)
+        elif not ver:
+            Log.info("版本检测失败，无法获取版本信息")
+        else:
+            Log.info("当前版本是最新版本")

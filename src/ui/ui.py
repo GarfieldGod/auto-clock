@@ -441,9 +441,9 @@ class ConfigWindow(QMainWindow):
                     return
 
                 task_id = datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
-                is_no_name = plan_name is None or plan_name == Key.Empty or plan_name == Key.DefaultWindowsPlanName
+                is_no_name = plan_name is None or plan_name == Key.Empty or plan_name == Key.DefaultLinuxPlanName
                 task = {
-                    Key.TaskName: Key.DefaultWindowsPlanName if is_no_name else plan_name,
+                    Key.TaskName: Key.DefaultLinuxPlanName if is_no_name else plan_name,
                     Key.TaskID: task_id,
                     Key.Operation: operation,
                     Key.TriggerType: trigger_type,

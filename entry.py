@@ -6,6 +6,7 @@ import argparse
 from datetime import datetime
 
 from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import QCoreApplication
 
 from src.utils.log import Log
 from src.utils.utils import Utils
@@ -49,20 +50,72 @@ else:  # Linux和其他系统
 if __name__ == '__main__':
     Log.open()
 
-    parser = argparse.ArgumentParser(description="auto-clock")
-    parser.add_argument("--task_id")
+    parser = argparse.ArgumentParser(
+        description="Auto-Clock - 自动打卡工具",
+        epilog="更多帮助信息请参考README.md和LINUX_INSTALL_GUIDE.md文件",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        usage="%(prog)s [选项]"
+    )
+    parser.add_argument("--task_id", help="指定要执行的任务ID")
+    parser.add_argument("--headless", action="store_true", help="以无头模式运行（不显示图形界面）")
+    parser.add_argument("--version", action="version", version="%(prog)s 1.0")
+    
+    # 添加使用示例
+    parser.description = """
+Auto-Clock - 自动打卡工具
+
+使用示例:
+  %(prog)s                      # 启动图形界面
+  %(prog)s --task_id=12345      # 执行指定任务
+  %(prog)s --headless --task_id=12345  # 以无头模式执行指定任务
+
+注意: 在Linux环境下，如果遇到图形界面问题，请参考LINUX_INSTALL_GUIDE.md文件
+"""
+    
     args = parser.parse_args()
 
     clean_invalid_windows_plan()
 
-    use_gui = not any(vars(args).values())
-    if use_gui:
-        app = QApplication(sys.argv)
-        window = ConfigWindow()
-        window.show()
-        app.exec_()
-
+    use_gui = not any(vars(args).values()) or args.headless is False
+    if use_gui and not args.headless:
+        try:
+            app = QApplication(sys.argv)
+            window = ConfigWindow()
+            window.show()
+            app.exec_()
+        except Exception as e:
+            error_msg = str(e)
+            Log.error(f"GUI启动失败: {error_msg}")
+            
+            # 检查是否是Qt平台插件错误
+            if "qt.qpa.plugin" in error_msg or "platform plugin" in error_msg or "xcb" in error_msg:
+                Log.error("检测到Qt平台插件错误，这通常是因为缺少图形界面依赖库。")
+                Log.error("请参考LINUX_INSTALL_GUIDE.md文件安装必要的依赖，或使用无头模式运行。")
+                Log.error("无头模式示例: python entry.py --headless --task_id=YOUR_TASK_ID")
+            
+            Log.info("尝试使用无头模式运行...")
+            # 如果GUI启动失败，切换到无头模式
+            if not args.task_id:
+                Log.error("无头模式需要提供task_id参数")
+                Log.error("使用 --help 参数查看所有可用选项")
+                sys.exit(1)
+            # 继续执行下面的任务处理代码
     else:
+        # 无头模式或任务模式
+        if not args.task_id and not args.headless:
+            Log.error("无头模式需要提供task_id参数")
+            Log.error("使用 --help 参数查看所有可用选项")
+            sys.exit(1)
+
+        config_data = Utils.read_dict_from_json(AppPath.DataJson)
+        send_email_success = False
+        send_email_failed = False
+        email = None
+        if config_data and config_data.get(Key.NotificationEmail):
+            email = config_data.get(Key.NotificationEmail)
+            send_email_success = config_data.get(Key.SendEmailWhenSuccess, False)
+            send_email_failed = config_data.get(Key.SendEmailWhenFailed, False)
+
         ok = False
         error = None
         task = None

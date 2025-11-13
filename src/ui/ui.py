@@ -17,7 +17,6 @@ from src.ui.ui_message import MessageBox
 from src.utils.update import VersionCheckThread
 from src.utils.utils import Utils, QtUI
 from src.core.clock_manager import ClockManager, run_clock, get_driver_path
-from src.extend.network_manager import connect_network, disconnect_network
 
 # 根据操作系统导入相应的模块
 if platform.system() == 'Windows':
@@ -25,10 +24,12 @@ if platform.system() == 'Windows':
     from src.ui.ui_windows_login import WindowsLoginDialog
     from src.extend.auto_windows_login import auto_windows_login_on
     from src.extend.auto_windows_plan import create_task, delete_scheduled_task
+    from src.extend.network_manager import connect_network, disconnect_network
 elif platform.system() == 'Linux':
     from src.ui.ui_linux_login import LinuxLoginDialog
     from src.ui.ui_linux_plan import LinuxPlanDialog
     from src.extend.auto_linux_plan import create_crontab_task, delete_crontab_task
+    from src.extend.auto_linux_network import connect_network, disconnect_network
 else:
     # 其他系统暂不支持特定功能
     pass
@@ -362,6 +363,11 @@ class ConfigWindow(QMainWindow):
             
     def disconnect_network_now(self):
         try:
+            # 检查网络管理功能是否可用
+            if disconnect_network is None:
+                MessageBox("Network management is not supported on this platform")
+                return
+                
             success, error = disconnect_network()
             if success:
                 MessageBox("Network disconnected successfully!")
@@ -373,6 +379,11 @@ class ConfigWindow(QMainWindow):
     # 添加联网功能
     def connect_network_now(self):
         try:
+            # 检查网络管理功能是否可用
+            if connect_network is None:
+                MessageBox("Network management is not supported on this platform")
+                return
+                
             success, error = connect_network()
             if success:
                 MessageBox("Network connected successfully!")

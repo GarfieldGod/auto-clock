@@ -23,7 +23,7 @@ class LinuxPlanDialog(QDialog):
             self.setWindowTitle("创建Linux计划任务")
             self.setWindowIcon(QIcon(Utils.get_ico_path()))
             self.plan_name_edit = QLineEdit()
-            self.plan_name_edit.setText(Key.DefaultWindowsPlanName)
+            self.plan_name_edit.setText(Key.DefaultLinuxPlanName)
             self.trigger_type = QComboBox()
             self.trigger_type.addItems(self.trigger_types)
             self.trigger_type.currentTextChanged.connect(self.trigger_type_changed)

@@ -267,7 +267,7 @@ def captcha(driver, selectors, max_attempts=3, tolerance=3):
             tolerance=tolerance
         )
 
-        screenshot_file_name = f"{datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")}_debug_canvas_attempt_{attempt + 1}"
+        screenshot_file_name = f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}_debug_canvas_attempt_{attempt + 1}"
         screenshot_file_path = f"{AppPath.ScreenshotRoot}\\{screenshot_file_name}.png"
         try:
             if not os.path.exists(AppPath.ScreenshotRoot):
@@ -296,12 +296,12 @@ def captcha(driver, selectors, max_attempts=3, tolerance=3):
         if result:
             Log.info(f"----------------------------[({attempt + 1}/{max_attempts}) 验证码通过，继续后续流程]----------------------------")
             if os.path.exists(screenshot_file_path):
-                os.rename(screenshot_file_path, f"{AppPath.ScreenshotRoot}\\{screenshot_file_name + "success"}.png")
+                os.rename(screenshot_file_path, f"{AppPath.ScreenshotRoot}\\{screenshot_file_name + 'success'}.png")
             return True, None
         else:
             Log.info(f"----------------------------[({attempt + 1}/{max_attempts}) 此次尝试未通过，保存截图供分析并重试]----------------------------")
             if os.path.exists(screenshot_file_path):
-                os.rename(screenshot_file_path, f"{AppPath.ScreenshotRoot}\\{screenshot_file_name + "failed"}.png")
+                os.rename(screenshot_file_path, f"{AppPath.ScreenshotRoot}\\{screenshot_file_name + 'failed'}.png")
 
     Log.error("重试结束，未通过验证码。请查看保存的截图与后端日志。")
     return False, "重试结束，未通过验证码。请查看保存的截图与后端日志。"

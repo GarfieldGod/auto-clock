@@ -28,7 +28,7 @@ def set_auto_login(username=None, password=None, enabled=False):
     :param enabled: 开启或关闭自动登录
     """
     reg_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
-    backup_file = os.path.join(AppPath.BackupRoot, f"windows_logon_backup_{datetime.now().strftime("%Y-%m-%d_%H_%M_%S.%f")}.reg")
+    backup_file = os.path.join(AppPath.BackupRoot, f"windows_logon_backup_{datetime.now().strftime('%Y-%m-%d_%H_%M_%S.%f')}.reg")
 
     if not os.path.exists(AppPath.BackupRoot):
         os.mkdir(AppPath.BackupRoot)
@@ -53,7 +53,7 @@ def set_auto_login(username=None, password=None, enabled=False):
                 Log.info(f"设置 DefaultPassword = {password}")
 
             winreg.SetValueEx(key, "AutoAdminLogon", 0, winreg.REG_SZ, "1" if enabled else "0")
-            Log.info(f"设置 AutoAdminLogon = {"1" if enabled else "0"}")
+            Log.info(f"设置 AutoAdminLogon = {'1' if enabled else '0'}")
 
         Log.info("\n自动登录配置完成！重启电脑后生效")
         Log.info(f"注册表备份文件已保存到：{backup_file}（若需恢复，双击该文件导入即可）")
@@ -75,3 +75,40 @@ def auto_windows_login_on(user_name, user_password):
 
 def auto_windows_login_off():
     return set_auto_login(None, None, enabled=False)
+
+def check_auto_login_status():
+    """
+    检查当前Windows自动登录状态
+    :return: (bool, str) - (是否启用, 状态描述)
+    """
+    reg_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+    try:
+        with winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                reg_path,
+                0,
+                winreg.KEY_READ | winreg.KEY_WOW64_64KEY
+        ) as key:
+            try:
+                auto_admin_logon, _ = winreg.QueryValueEx(key, "AutoAdminLogon")
+                username, _ = winreg.QueryValueEx(key, "DefaultUserName")
+                has_password = False
+                try:
+                    password, _ = winreg.QueryValueEx(key, "DefaultPassword")
+                    has_password = password is not None and password != ""
+                except FileNotFoundError:
+                    pass
+                
+                if auto_admin_logon == "1":
+                    status = f"自动登录已启用 (用户: {username})"
+                    return True, status
+                else:
+                    return False, "自动登录未启用"
+            except FileNotFoundError:
+                return False, "自动登录未配置"
+    except PermissionError:
+        Log.warning("检查自动登录状态时权限不足")
+        return None, "无法检查状态：权限不足"
+    except Exception as e:
+        Log.error(f"检查自动登录状态时出错：{str(e)}")
+        return None, "无法检查状态：未知错误"

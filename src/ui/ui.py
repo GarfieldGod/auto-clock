@@ -20,6 +20,7 @@ from src.utils.utils import Utils, QtUI
 from src.extend.auto_windows_login import auto_windows_login_on
 from src.core.clock_manager import ClockManager, run_clock, get_driver_path
 from src.extend.auto_windows_plan import create_task, delete_scheduled_task
+from src.extend.network_manager import connect_network, disconnect_network
 
 
 Text_Color = "grey"
@@ -52,6 +53,17 @@ class ConfigWindow(QMainWindow):
         # User Information
         self.user_name = QLineEdit()
         self.user_password = QLineEdit()
+        self.user_password.setEchoMode(QLineEdit.Password)  # 设置密码框隐藏输入
+        
+        # 创建密码可见性切换按钮
+        self.show_password_btn = QPushButton()
+        self.show_password_btn.setFixedSize(24, 24)
+        self.show_password_btn.setStyleSheet("border: none; background-color: transparent;")
+        
+        # 使用锁图标作为默认状态（密码隐藏）
+        self.show_password_btn.setText("🔒")
+        self.show_password_btn.setToolTip("显示密码")
+        self.show_password_btn.clicked.connect(self.toggle_password_visibility)
         self.captcha_retry_times = QLineEdit()
         self.notification_email = QLineEdit()
         self.captcha_tolerance_angle = QLineEdit()
@@ -67,9 +79,17 @@ class ConfigWindow(QMainWindow):
         layout_username = QVBoxLayout()
         layout_username.addWidget(QLabel("UserName:"))
         layout_username.addWidget(self.user_name)
+        # 创建密码输入的垂直布局
         layout_password = QVBoxLayout()
         layout_password.addWidget(QLabel("Password:"))
-        layout_password.addWidget(self.user_password)
+        
+        # 创建水平布局来容纳密码输入框和眼睛图标按钮
+        password_input_layout = QHBoxLayout()
+        password_input_layout.addWidget(self.user_password)
+        password_input_layout.addWidget(self.show_password_btn)
+        password_input_layout.setContentsMargins(0, 0, 0, 0)
+        
+        layout_password.addLayout(password_input_layout)
         layout_user = QVBoxLayout()
         layout_user.addLayout(layout_username)
         layout_user.addLayout(layout_password)
@@ -142,6 +162,7 @@ class ConfigWindow(QMainWindow):
         self.auto_windows_login_on = QPushButton("Set Windows Auto Login")
         self.auto_windows_login_on.clicked.connect(self.auto_login_windows)
         layout_plan_list.addWidget(self.auto_windows_login_on)
+        
         self.widget_plan_list = QListWidget()
         layout_plan_list.addWidget(QLabel("Windows Plan List:"))
         layout_plan_list.addWidget(self.widget_plan_list)
@@ -271,6 +292,41 @@ class ConfigWindow(QMainWindow):
         except Exception as e:
             MessageBox(f"Try Failed!\nError: {e}")
         run_clock()
+    
+    # 添加断网功能
+    def toggle_password_visibility(self):
+        """切换密码可见性"""
+        if self.user_password.echoMode() == QLineEdit.Password:
+            # 显示密码 - 使用普通眼睛图标
+            self.user_password.setEchoMode(QLineEdit.Normal)
+            self.show_password_btn.setText("👁")
+            self.show_password_btn.setToolTip("隐藏密码")
+        else:
+            # 隐藏密码 - 使用闭眼睛+斜杠图标
+            self.user_password.setEchoMode(QLineEdit.Password)
+            self.show_password_btn.setText("🔒")
+            self.show_password_btn.setToolTip("显示密码")
+            
+    def disconnect_network_now(self):
+        try:
+            success, error = disconnect_network()
+            if success:
+                MessageBox("Network disconnected successfully!")
+            else:
+                MessageBox(f"Failed to disconnect network: {error}")
+        except Exception as e:
+            MessageBox(f"Error disconnecting network: {str(e)}")
+    
+    # 添加联网功能
+    def connect_network_now(self):
+        try:
+            success, error = connect_network()
+            if success:
+                MessageBox("Network connected successfully!")
+            else:
+                MessageBox(f"Failed to connect network: {error}")
+        except Exception as e:
+            MessageBox(f"Error connecting network: {str(e)}")
 
     def get_group_css(self, css_data):
         background_color = css_data["BackGround_Color"] if css_data.get("BackGround_Color") is not None and css_data["BackGround_Color"] != Key.Empty else BackGround_Color
@@ -496,7 +552,7 @@ class ConfigWindow(QMainWindow):
         if ok and ver:
             is_update = MessageBox(
                 f"There is a new version for the app:\t\n\n"
-                f"Local: {ver.get("local")} Newest: {ver.get("remote")}\t\n\n"
+                f"Local: {ver.get('local')} Newest: {ver.get('remote')}\t\n\n"
                 f"Do you want to download new ?\t\n\n",
                 need_check=True, message_only=False)
             if is_update.exec_() == QDialog.Accepted:

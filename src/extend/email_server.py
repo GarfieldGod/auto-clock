@@ -75,10 +75,10 @@ def send_email_by_result(task, email, send_email_success, send_email_failed, ok,
     else:
         return
     device = Utils.get_device_info()
-    device_info = f"{device.get("device_name")} ({device.get("system")} {device.get("version")})" if device else "Unknown Device"
+    device_info = f"{device.get('device_name')} ({device.get('system')} {device.get('version')})" if device else "Unknown Device"
     Log.info(f"device_info: {device_info}")
     ip = Utils.get_location_into()
-    ip_info = f"{ip.get("city")} ({ip.get("country")} {ip.get("region")}) {ip.get("ip")}" if ip else "Unknown Location"
+    ip_info = f"{ip.get('city')} ({ip.get('country')} {ip.get('region')}) {ip.get('ip')}" if ip else "Unknown Location"
     Log.info(f"ip_info: {ip_info}")
 
     message = get_info_html(task, device_info, ip_info)

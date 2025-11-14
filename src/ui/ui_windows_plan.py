@@ -1,9 +1,9 @@
 import copy
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QDate, QLocale
-from PyQt5.QtWidgets import QDialogButtonBox, QVBoxLayout, QComboBox, QWidget, QHBoxLayout, QLineEdit, QDialog
+from PyQt5.QtWidgets import QDialogButtonBox, QVBoxLayout, QComboBox, QWidget, QHBoxLayout, QLineEdit, QDialog, QLabel
 
 from src.utils.log import Log
 from src.utils.const import Key
@@ -14,6 +14,7 @@ from src.ui.ui_message import MessageBox
 
 class WindowsPlanDialog(QDialog):
     trigger_types = [Key.Once, Key.Multiple, Key.Daily, Key.Weekly, Key.Monthly]
+    day_time_types = [Key.Specify, Key.Random]
     operation_types = [Key.AutoClock, Key.ShutDownWindows, Key.WindowsSleep, Key.DisconnectNetwork, Key.ConnectNetwork]
 
     def __init__(self, parent=None):
@@ -22,14 +23,21 @@ class WindowsPlanDialog(QDialog):
             self.setMinimumWidth(500)
             self.setWindowTitle("Create Windows Plan")
             self.setWindowIcon(QIcon(Utils.get_ico_path()))
+            self.locale = QLocale(QLocale.English)
+            # 任务名
             self.plan_name_edit = QLineEdit()
             self.plan_name_edit.setText(Key.DefaultWindowsPlanName)
+            # 触发类型
             self.trigger_type = QComboBox()
             self.trigger_type.addItems(self.trigger_types)
             self.trigger_type.currentTextChanged.connect(self.trigger_type_changed)
+            # 操作
             self.operation = QComboBox()
             self.operation.addItems(self.operation_types)
-            self.locale = QLocale(QLocale.English)
+            # dayTime类型
+            self.day_time_type = QComboBox()
+            self.day_time_type.addItems(self.day_time_types)
+            self.day_time_type.currentTextChanged.connect(self.day_time_type_changed)
 
             widget_layout = QVBoxLayout(self)
 
@@ -48,26 +56,54 @@ class WindowsPlanDialog(QDialog):
             widget_line_3 = QHBoxLayout()
             widget_line_3.addWidget(QtUI.create_label("Operation:"))
             widget_line_3.addWidget(self.operation)
+            # 选择DayTime Type
+            widget_line_4 = QHBoxLayout()
+            widget_line_4.addWidget(QtUI.create_label("DayTime Type:"))
+            widget_line_4.addWidget(self.day_time_type)
+
             layout_setting.addLayout(widget_line_1)
             layout_setting.addLayout(widget_line_2)
             layout_setting.addLayout(widget_line_3)
+            layout_setting.addLayout(widget_line_4)
             widget_layout.addWidget(widget_setting)
-            # 选择DayTime
-            self.widget_day_time_selector = QWidget()
-            self.layout_day_time_selector = QHBoxLayout(self.widget_day_time_selector)
+
+            # 特定DayTime
+            self.widget_specify_day_time_selector = QWidget()
+            self.layout_specify_day_time_selector = QHBoxLayout(self.widget_specify_day_time_selector)
             self.hour_sel = QComboBox()
             self.hour_sel.addItems(Utils.get_nums_array(0,23))
             self.hour_sel.setCurrentIndex(datetime.now().hour)
             self.minute_sel = QComboBox()
             self.minute_sel.addItems(Utils.get_nums_array(0,59))
             self.minute_sel.setCurrentIndex(datetime.now().minute)
-            self.layout_day_time_selector.addWidget(QtUI.create_label("DayTime:"))
-            self.layout_day_time_selector.addStretch()
-            self.layout_day_time_selector.addWidget(QtUI.create_label("Hours:", size=10, length=50))
-            self.layout_day_time_selector.addWidget(self.hour_sel)
-            self.layout_day_time_selector.addWidget(QtUI.create_label("Minute:", size=10, length=50))
-            self.layout_day_time_selector.addWidget(self.minute_sel)
-            widget_layout.addWidget(self.widget_day_time_selector)
+            self.layout_specify_day_time_selector.addWidget(QtUI.create_label("DayTime:"))
+            self.layout_specify_day_time_selector.addStretch()
+            self.layout_specify_day_time_selector.addWidget(QtUI.create_label("Hours:", size=10, length=50))
+            self.layout_specify_day_time_selector.addWidget(self.hour_sel)
+            self.layout_specify_day_time_selector.addWidget(QtUI.create_label("Minute:", size=10, length=50))
+            self.layout_specify_day_time_selector.addWidget(self.minute_sel)
+            # 随机DayTime
+            self.widget_random_day_time_selector = QWidget()
+            self.layout_random_day_time_selector = QHBoxLayout(self.widget_random_day_time_selector)
+            self.hour_sel_start = QComboBox()
+            self.hour_sel_start.addItems(Utils.get_nums_array(0,23))
+            self.hour_sel_start.setCurrentIndex(datetime.now().hour)
+            self.minute_sel_start = QComboBox()
+            self.minute_sel_start.addItems(Utils.get_nums_array(0,59))
+            self.minute_sel_start.setCurrentIndex(datetime.now().minute)
+            self.hour_sel_end = QComboBox()
+            self.hour_sel_end.addItems(Utils.get_nums_array(0,23))
+            self.hour_sel_end.setCurrentIndex(datetime.now().hour)
+            self.minute_sel_end = QComboBox()
+            self.minute_sel_end.addItems(Utils.get_nums_array(0,59))
+            self.minute_sel_end.setCurrentIndex(datetime.now().minute)
+            self.layout_random_day_time_selector.addWidget(QtUI.create_label("DayTime Scope:"))
+            self.layout_random_day_time_selector.addStretch()
+            self.layout_random_day_time_selector.addWidget(self.hour_sel_start)
+            self.layout_random_day_time_selector.addWidget(self.minute_sel_start)
+            self.layout_random_day_time_selector.addWidget(QLabel("-"))
+            self.layout_random_day_time_selector.addWidget(self.hour_sel_end)
+            self.layout_random_day_time_selector.addWidget(self.minute_sel_end)
 
             widget_layout.addStretch()
 
@@ -111,6 +147,13 @@ class WindowsPlanDialog(QDialog):
             self.monthly_day_sel.setCurrentIndex(datetime.now().day - 1)
 
             # 预留变化区
+            self.day_time_space_area = QVBoxLayout()
+            self.day_time_space_area.addWidget(self.widget_specify_day_time_selector)
+            self.day_time_space_area.addWidget(self.widget_random_day_time_selector)
+            widget_layout.addLayout(self.day_time_space_area)
+            self.space_area_hide_all_content(self.day_time_space_area)
+            self.widget_specify_day_time_selector.show()
+
             self.space_area = QVBoxLayout()
             self.space_area.addWidget(self.widget_one_day_selector)
             self.space_area.addWidget(self.calendar_selector)
@@ -118,7 +161,7 @@ class WindowsPlanDialog(QDialog):
             self.space_area.addWidget(self.widget_weekly_selector)
             self.space_area.addWidget(self.widget_monthly_selector)
             widget_layout.addLayout(self.space_area)
-            self.space_area_hide_all_content()
+            self.space_area_hide_all_content(self.space_area)
             self.widget_one_day_selector.show()
 
             # 按键
@@ -130,15 +173,15 @@ class WindowsPlanDialog(QDialog):
             Log.error(e)
             MessageBox(e)
 
-    def space_area_hide_all_content(self):
-        for i in range(self.space_area.count()):
-            item = self.space_area.itemAt(i)
+    def space_area_hide_all_content(self, area):
+        for i in range(area.count()):
+            item = area.itemAt(i)
             widget = item.widget()
             if widget is not None:
                 widget.hide()
 
     def trigger_type_changed(self):
-        self.space_area_hide_all_content()
+        self.space_area_hide_all_content(self.space_area)
         if self.trigger_type.currentText() == self.trigger_types[1]:
             self.calendar_selector.show()
         elif self.trigger_type.currentText() == self.trigger_types[0]:
@@ -149,6 +192,17 @@ class WindowsPlanDialog(QDialog):
             self.widget_monthly_selector.show()
         else:
             self.widget_daily_selector.show()
+
+        self.adjustSize()
+
+    def day_time_type_changed(self):
+        self.space_area_hide_all_content(self.day_time_space_area)
+        if self.day_time_type.currentText() == self.day_time_types[0]:
+            self.widget_specify_day_time_selector.show()
+        elif self.day_time_type.currentText() == self.day_time_types[1]:
+            self.widget_random_day_time_selector.show()
+        else:
+            self.widget_specify_day_time_selector.show()
 
         self.adjustSize()
 
@@ -170,20 +224,39 @@ class WindowsPlanDialog(QDialog):
         self.day_sel.addItems(Utils.get_nums_array(1, day))
         self.day_sel.setCurrentIndex(0)
 
+    def get_time_offset(self):
+        start_time_str = f'{self.hour_sel_start.currentText().strip()}:{self.minute_sel_start.currentText().strip()}'
+        end_time_str = f'{self.hour_sel_end.currentText().strip()}:{self.minute_sel_end.currentText().strip()}'
+
+        start_time = datetime.strptime(start_time_str, "%H:%M")
+        end_time = datetime.strptime(end_time_str, "%H:%M")
+
+        if end_time < start_time:
+            end_time += timedelta(days=1)
+
+        time_offset = end_time - start_time
+        return int(time_offset.total_seconds())
+
     def values(self):
         selected_multiple_dates = copy.deepcopy(self.calendar_selector.selected_dates)
         self.calendar_selector.selected_dates.clear()
         selected_weekly_dates = copy.deepcopy(self.weekly_day_sel.selected_dates)
         self.weekly_day_sel.selected_dates.clear()
+
+        hour = self.hour_sel.currentText().strip() if self.day_time_type.currentText() == Key.Specify else self.hour_sel_start.currentText().strip()
+        minute = self.minute_sel.currentText().strip() if self.day_time_type.currentText() == Key.Specify else self.minute_sel_start.currentText().strip()
+        time_offset = self.get_time_offset()
         return {
             Key.WindowsPlanName: self.plan_name_edit.text().strip(),
             Key.TriggerType: self.trigger_type.currentText().strip(),
-            Key.Operation: self.operation.currentText().strip() ,
+            Key.Operation: self.operation.currentText().strip(),
+            Key.DayTimeType: self.day_time_type.currentText().strip(),
             Key.Year: self.year_sel.currentText().strip(),
             Key.Month: self.month_sel.currentText().strip(),
             Key.Day: self.day_sel.currentText().strip(),
-            Key.Hour: self.hour_sel.currentText().strip(),
-            Key.Minute: self.minute_sel.currentText().strip(),
+            Key.Hour: hour,
+            Key.Minute: minute,
+            Key.TimeOffset: time_offset,
             Key.ExecuteDays: selected_multiple_dates,
             Key.Weekly: selected_weekly_dates,
             Key.Monthly: self.monthly_day_sel.currentText().strip()

@@ -1,6 +1,8 @@
 import os
 import sys
 import json
+from datetime import datetime, timedelta
+
 import requests
 import platform
 from pathlib import Path
@@ -144,6 +146,25 @@ class Utils:
                replace("-", "_").
                replace(",", "_"))
         return ret
+
+    @staticmethod
+    def hour_min_str_add_seconds(time_str: str, add_seconds: int):
+        try:
+            parts = time_str.split(":")
+            if len(parts) != 2:
+                Log.error("时间格式错误，需用冒号 ':' 分隔")
+                return None
+            hour = parts[0].zfill(2)
+            minute = parts[1].zfill(2)
+            time_str = f"{hour}:{minute}"
+
+            time = datetime.strptime(time_str, "%H:%M")
+            delta = timedelta(seconds=add_seconds)
+            new_time = time + delta
+            return new_time.strftime("%H:%M")
+        except ValueError as e:
+            Log.error(f"时间格式错误！请输入 'HH:MM' 或 'H:M' 格式，错误原因：{str(e)}")
+            return None
 
 class QtUI:
     @staticmethod

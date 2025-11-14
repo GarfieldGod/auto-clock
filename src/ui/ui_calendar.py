@@ -76,7 +76,7 @@ class Calendar(QWidget):
                 btn = QPushButton()
                 btn.setCheckable(True)
                 btn.setFlat(False)
-                btn.setStyleSheet(self.get_btn_style())
+                btn.setStyleSheet(get_btn_style())
                 btn.clicked.connect(lambda checked, b=btn: self.on_date_click(b))
                 self.grid_layout.addWidget(btn, row, col)
                 row_buttons.append(btn)
@@ -84,72 +84,6 @@ class Calendar(QWidget):
 
         self.main_layout.addWidget(widget_nav)
         self.main_layout.addWidget(widget_grid)
-
-    def get_btn_style(self):
-        return """
-            QPushButton:!checked:enabled {
-                font-weight: bold;
-                font-family: Arial, "Helvetica Neue", sans-serif;
-                text-align: center;
-                font-size: 14px;
-                color: #333;
-                background-color: white;
-                border: 0.5px solid #eee;
-                border-radius: 4px;
-                padding: 10px 0;
-            }
-            QPushButton:!checked:enabled:hover {
-                background-color: #f8f8f8;
-                border-color: #ddd;
-            }
-            QPushButton:checked:enabled {
-                text-align: center;
-                font-size: 14px;
-                color: white;
-                background-color: #4ecdc4;
-                border: 1px solid #3dbbb4;
-                border-radius: 4px;
-                padding: 10px 0;
-                font-weight: bold;
-            }
-            QPushButton:checked:enabled:hover {
-                background-color: #3dbbb4;
-            }
-            QPushButton:disabled {
-                color: #ccc;
-                background-color: #fafafa;
-                border-color: #eee;
-                border-radius: 4px;
-                padding: 10px 0;
-            }
-            QPushButton#today:!checked:enabled {
-                color: white;
-                background-color: #ff8b8b;
-                border: 1px solid #ff4949;
-            }
-            QPushButton#today:checked:enabled {
-                color: white;
-                background-color: #ff0000;
-                border: 1px solid #ff3333;
-            }
-            QPushButton#weekend:!checked:enabled {
-                color: #ff0000;
-                background-color: white;
-                border: 1px solid #eee;
-            }
-            QPushButton#weekend:checked:enabled {
-                color: white;
-                background-color: #4ecdc4;
-                border: 1px solid #3dbbb4;
-            }
-            QPushButton#not_this_month:!checked:enabled {
-                color: #ccc;
-                background-color: #fafafa;
-                border-color: #eee;
-                border-radius: 4px;
-                padding: 10px 0;
-            }
-        """
 
     def refresh_calendar(self):
         year = self.current_date.year()
@@ -204,7 +138,7 @@ class Calendar(QWidget):
                 btn.setProperty("date", btn_date)
                 btn.setChecked(btn_date in self.selected_dates)
 
-                btn.setStyleSheet(self.get_btn_style())
+                btn.setStyleSheet(get_btn_style())
 
                 if btn_date >= QDate.currentDate():
                     btn.setEnabled(True)
@@ -232,11 +166,107 @@ class Calendar(QWidget):
         self.current_date = self.current_date.addMonths(1)
         self.refresh_calendar()
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    app.setStyle("Fusion")
+class WeeklyCalendar(QWidget):
+    selected_dates = []
 
-    calendar = Calendar()
-    calendar.show()
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.locale = QLocale(QLocale.English)
 
-    sys.exit(app.exec_())
+        self.setMinimumHeight(70)
+        self.setMinimumWidth(350)
+        self.btnSize = 40
+
+        self.init_ui()
+
+    def init_ui(self):
+        widget = QWidget(self)
+        widget.setStyleSheet("background-color: rgb(255, 255, 255);border-radius: 5px;")
+        layout = QHBoxLayout(widget)
+        current_day_of_week = self.locale.dayName(QDate.currentDate().dayOfWeek(), QLocale.ShortFormat)
+
+        for i in range(1, 8):
+            day_name = self.locale.dayName(i, QLocale.ShortFormat)
+            btn = QPushButton(day_name)
+            if day_name in ["Sat", "Sun"]:
+                btn.setObjectName("weekend")
+            if day_name == current_day_of_week:
+                btn.setObjectName("today")
+            btn.setFixedSize(self.btnSize, self.btnSize)
+            btn.setCheckable(True)
+            btn.setFlat(False)
+            btn.setStyleSheet(get_btn_style())
+            btn.clicked.connect(lambda checked, b=day_name: self.on_day_clicked(b))
+            layout.addWidget(btn)
+
+    def on_day_clicked(self, date):
+        if date in self.selected_dates:
+            self.selected_dates.remove(date)
+        else:
+            self.selected_dates.append(date)
+
+def get_btn_style():
+    return """
+        QPushButton:!checked:enabled {
+            font-weight: bold;
+            font-family: Arial, "Helvetica Neue", sans-serif;
+            text-align: center;
+            font-size: 14px;
+            color: #333;
+            background-color: white;
+            border: 0.5px solid #eee;
+            border-radius: 4px;
+            padding: 10px 0;
+        }
+        QPushButton:!checked:enabled:hover {
+            background-color: #f8f8f8;
+            border-color: #ddd;
+        }
+        QPushButton:checked:enabled {
+            text-align: center;
+            font-size: 14px;
+            color: white;
+            background-color: #4ecdc4;
+            border: 1px solid #3dbbb4;
+            border-radius: 4px;
+            padding: 10px 0;
+            font-weight: bold;
+        }
+        QPushButton:checked:enabled:hover {
+            background-color: #3dbbb4;
+        }
+        QPushButton:disabled {
+            color: #ccc;
+            background-color: #fafafa;
+            border-color: #eee;
+            border-radius: 4px;
+            padding: 10px 0;
+        }
+        QPushButton#today:!checked:enabled {
+            color: white;
+            background-color: #ff8b8b;
+            border: 1px solid #ff4949;
+        }
+        QPushButton#today:checked:enabled {
+            color: white;
+            background-color: #ff0000;
+            border: 1px solid #ff3333;
+        }
+        QPushButton#weekend:!checked:enabled {
+            color: #ff0000;
+            background-color: white;
+            border: 1px solid #eee;
+        }
+        QPushButton#weekend:checked:enabled {
+            color: white;
+            background-color: #4ecdc4;
+            border: 1px solid #3dbbb4;
+        }
+        QPushButton#not_this_month:!checked:enabled {
+            color: #ccc;
+            background-color: #fafafa;
+            border-color: #eee;
+            border-radius: 4px;
+            padding: 10px 0;
+        }
+    """

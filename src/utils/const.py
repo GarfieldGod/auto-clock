@@ -11,6 +11,7 @@ class Key:
     TaskName: str = "task_name"
     TaskID: str = "task_id"
     TriggerType: str = "trigger_type"
+    DayTimeType: str = "day_time_type"
     Operation: str = "operation"
     WindowsPlanName: str = "windows_plan_name"
     ExecuteTime: str = "execute_time"
@@ -22,12 +23,19 @@ class Key:
     Day: str = "day"
     Hour: str = "hour"
     Minute: str = "minute"
+    HourOffSet: str = "hour_offset"
+    MinuteOffSet: str = "minute_offset"
+    TimeOffset: str = "time_offset"
+    CostTime: str = "cost_time"
 
     Once: str = "Once"
     Multiple: str = "Multiple"
     Daily: str = "Daily"
     Weekly: str = "Weekly"
     Monthly: str = "Monthly"
+
+    Random: str = "Random"
+    Specify: str = "Specify"
 
     NotificationEmail: str = "notification_email"
     SendEmailWhenSuccess: str = "send_email_success"

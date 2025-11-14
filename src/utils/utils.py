@@ -136,6 +136,15 @@ class Utils:
             entry_script = Path(__file__).parent.parent.parent / "entry.py"
             return f'"{python_exe}" "{entry_script}"'
 
+    @staticmethod
+    def replace_signs(string):
+        ret = (string.
+               replace(":", "_").
+               replace(" ", "_").
+               replace("-", "_").
+               replace(",", "_"))
+        return ret
+
 class QtUI:
     @staticmethod
     def create_label(message, size=11, length=150, family="Arial", width_policy=None, height_policy=None,

@@ -400,7 +400,7 @@ class ConfigWindow(QMainWindow):
                     for execute_day in execute_days:
                         task[Key.ExecuteDay] = execute_day
                         task[Key.WindowsPlanName] = task[Key.TaskName] + "_Type_" + trigger_type + "_Date_" + execute_day + "_Time_" + execute_time + "_Id_" + task_id
-                        task[Key.WindowsPlanName] = task[Key.WindowsPlanName].replace(":", "_").replace(" ", "_").replace("-", "_")
+                        task[Key.WindowsPlanName] = Utils.replace_signs(task[Key.WindowsPlanName])
                         ok, error = create_task(task)
                         multiple_tasks[execute_day] = task[Key.WindowsPlanName]
                         if error:
@@ -423,7 +423,12 @@ class ConfigWindow(QMainWindow):
                     elif trigger_type == Key.Daily:
                         pass
                     elif trigger_type == Key.Weekly:
-                        task[Key.ExecuteDay] = value.get(Key.Weekly)
+                        dates = value.get(Key.Weekly)
+                        if not dates and len(dates) == 0: return
+                        dates_str = dates[0]
+                        for i in range(1, len(dates)):
+                            dates_str +=  "," + dates[i]
+                        task[Key.ExecuteDay] = dates_str
                     elif trigger_type == Key.Monthly:
                         task[Key.ExecuteDay] = value.get(Key.Monthly)
                     else:
@@ -433,7 +438,7 @@ class ConfigWindow(QMainWindow):
                                                  "_Date_" +task.get(Key.ExecuteDay, Key.Unknown if trigger_type != Key.Daily else Key.Daily) +
                                                  "_Time_" + execute_time +
                                                  "_Id_" + task_id)
-                    task[Key.WindowsPlanName] = task[Key.WindowsPlanName].replace(":", "_").replace(" ", "_").replace("-", "_")
+                    task[Key.WindowsPlanName] = Utils.replace_signs(task[Key.WindowsPlanName])
                     ok, error = create_task(task)
                     if error:
                         raise Exception(error)

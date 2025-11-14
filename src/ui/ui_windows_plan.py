@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QDialogButtonBox, QVBoxLayout, QComboBox, QWidget, Q
 
 from src.utils.log import Log
 from src.utils.const import Key
-from src.ui.ui_calendar import Calendar
+from src.ui.ui_calendar import Calendar, WeeklyCalendar
 from src.utils.utils import Utils, QtUI
 from src.ui.ui_message import MessageBox
 
@@ -98,12 +98,9 @@ class WindowsPlanDialog(QDialog):
             # 指定每周
             self.widget_weekly_selector = QWidget()
             self.layout_weekly_selector = QHBoxLayout(self.widget_weekly_selector)
-            self.weekly_day_sel = QComboBox()
-            for i in range(1, 8):
-                self.weekly_day_sel.addItem(self.locale.dayName(int(i), QLocale.LongFormat))
             self.layout_weekly_selector.addWidget(QtUI.create_label("The Day:"))
+            self.weekly_day_sel = WeeklyCalendar()
             self.layout_weekly_selector.addWidget(self.weekly_day_sel)
-            self.weekly_day_sel.setCurrentIndex(QDate.currentDate().dayOfWeek() - 1)
             # 指定每月
             self.widget_monthly_selector = QWidget()
             self.layout_monthly_selector = QHBoxLayout(self.widget_monthly_selector)
@@ -174,8 +171,10 @@ class WindowsPlanDialog(QDialog):
         self.day_sel.setCurrentIndex(0)
 
     def values(self):
-        selected_dates = copy.deepcopy(self.calendar_selector.selected_dates)
+        selected_multiple_dates = copy.deepcopy(self.calendar_selector.selected_dates)
         self.calendar_selector.selected_dates.clear()
+        selected_weekly_dates = copy.deepcopy(self.weekly_day_sel.selected_dates)
+        self.weekly_day_sel.selected_dates.clear()
         return {
             Key.WindowsPlanName: self.plan_name_edit.text().strip(),
             Key.TriggerType: self.trigger_type.currentText().strip(),
@@ -185,7 +184,7 @@ class WindowsPlanDialog(QDialog):
             Key.Day: self.day_sel.currentText().strip(),
             Key.Hour: self.hour_sel.currentText().strip(),
             Key.Minute: self.minute_sel.currentText().strip(),
-            Key.ExecuteDays: selected_dates,
-            Key.Weekly: self.weekly_day_sel.currentText().strip()[0:3],
+            Key.ExecuteDays: selected_multiple_dates,
+            Key.Weekly: selected_weekly_dates,
             Key.Monthly: self.monthly_day_sel.currentText().strip()
         }

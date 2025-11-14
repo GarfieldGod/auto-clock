@@ -82,7 +82,7 @@ class ConfigWindow(QMainWindow):
         # 创建密码输入的垂直布局
         layout_password = QVBoxLayout()
         layout_password.addWidget(QLabel("Password:"))
-        
+
         # 创建水平布局来容纳密码输入框和眼睛图标按钮
         password_input_layout = QHBoxLayout()
         password_input_layout.addWidget(self.user_password)
@@ -379,6 +379,7 @@ class ConfigWindow(QMainWindow):
                 plan_name = value.get(Key.WindowsPlanName)
                 operation = value.get(Key.Operation)
                 trigger_type = value.get(Key.TriggerType)
+                day_time_type = value.get(Key.DayTimeType)
                 execute_time = value.get(Key.Hour) + ":" + value.get(Key.Minute)
                 if not value or not trigger_type or not operation:
                     return
@@ -389,9 +390,14 @@ class ConfigWindow(QMainWindow):
                     Key.TaskName: Key.DefaultWindowsPlanName if is_no_name else plan_name,
                     Key.TaskID: task_id,
                     Key.Operation: operation,
+                    Key.DayTimeType: day_time_type,
                     Key.TriggerType: trigger_type,
                     Key.ExecuteTime: execute_time
                 }
+
+                if day_time_type == Key.Random:
+                    task[Key.TimeOffset] = value.get(Key.TimeOffset, 0)
+                    Log.info(f"Random Time Offset: {task[Key.TimeOffset]}")
 
                 if trigger_type == Key.Multiple:
                     multiple_tasks = {}

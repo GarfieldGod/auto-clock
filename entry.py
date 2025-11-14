@@ -1,5 +1,8 @@
 import sys
+import time
+import random
 import argparse
+from datetime import datetime
 
 from PyQt5.QtWidgets import QApplication
 
@@ -40,8 +43,17 @@ if __name__ == '__main__':
                 if not task:
                     raise Exception(f"Task ID: {args.task_id} not found.")
                 operation = task.get(Key.Operation)
+                day_time_type = task.get(Key.DayTimeType)
+                if day_time_type and day_time_type == Key.Random:
+                    time_offset = task.get(Key.TimeOffset, 0)
+                    random_sec = random.randint(0, time_offset)
+                    Log.info(f"将等待 {random_sec} 秒...")
+                    time.sleep(random_sec)
+                    Log.info("等待结束！继续执行任务")
 
                 Log.info(f"Task ID: {args.task_id} has found, Task Name: {task.get(Key.TaskName)} Operation: {operation}")
+                start_time = datetime.now()
+
                 if operation == Key.AutoClock:
                     ok, error = run_clock()
                 elif operation == Key.ShutDownWindows:
@@ -55,7 +67,11 @@ if __name__ == '__main__':
                 else:
                     error = f"No operation specified for: {operation}"
 
-                Log.info("Finish Task.")
+                end_time = datetime.now()
+                elapsed_time = end_time - start_time
+                elapsed_sec = elapsed_time.total_seconds()
+                task[Key.CostTime] = int(elapsed_sec)
+                Log.info(f"Finish Task. Start at: {start_time} End at: {end_time} Cost time: {elapsed_sec} sec")
             else:
                 exit()
         except Exception as e:

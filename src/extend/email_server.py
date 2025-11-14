@@ -198,8 +198,12 @@ def get_info_html(task, device_info, ip_info):
         <td>{task.get(Key.ExecuteDay, QDate.currentDate().toString('yyyy-MM-dd'))}</td>
       </tr>
       <tr>
-        <td style="text-align: left; font-weight: normal; padding-right: 8px;">EXECUTE TIME:</td>
-        <td>{task.get(Key.ExecuteTime, Key.Unknown)}</td>
+        <td style="text-align: left; font-weight: normal; padding-right: 8px;">SCHEDULED TIME:</td>
+        <td>{f'{task.get(Key.ExecuteTime, Key.Unknown)}{'' if not task.get(Key.TimeOffset) else f' - {Utils.hour_min_str_add_seconds(task.get(Key.ExecuteTime), task.get(Key.TimeOffset))}'}'}</td>
+      </tr>
+      <tr>
+        <td style="text-align: left; font-weight: normal; padding-right: 8px;">ACTUAL FINISHED:</td>
+        <td>{f'{datetime.now().strftime("%H:%M")} (Cost: {task.get(Key.CostTime)}s)'}</td>
       </tr>
     </table>
     """
@@ -213,7 +217,8 @@ if __name__ == "__main__":
         "trigger_type": "Once",
         "execute_time": "19:55",
         "windows_plan_name": "AutoClock_Windows_Plan_Type_Once_Date_2025_11_08_Time_19_55_Id_2025_11_08_19_54_47_920866",
-        "execute_day": "2025-11-08"
+        "execute_day": "2025-11-08",
+        Key.TimeOffset: 3960,
     }
     email = "1351763110@qq.com"
     ok, error = False, "Unknown Error"

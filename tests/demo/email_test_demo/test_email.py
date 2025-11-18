@@ -5,9 +5,9 @@
 用于测试邮件发送功能，帮助定位问题
 
 使用方法:
-    python test_email.py
+    python tests/demo/email_test_demo/test_email.py
     或
-    python test_email.py --receiver your_email@example.com
+    python tests/demo/email_test_demo/test_email.py --receiver your_email@example.com
 """
 
 import sys
@@ -15,8 +15,11 @@ import os
 import argparse
 from datetime import datetime
 
-# 添加项目路径到sys.path
-project_root = os.path.dirname(os.path.abspath(__file__))
+# 添加项目根目录到sys.path
+# 当前文件在 tests/demo/email_test_demo/test_email.py
+# 项目根目录在 ../../../
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '..', '..', '..'))
 sys.path.insert(0, project_root)
 
 from src.utils.log import Log

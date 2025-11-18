@@ -1,6 +1,6 @@
 # 邮件功能测试指南
 
-本指南介绍如何使用 `test_email.py` 脚本测试邮件发送功能。
+本指南介绍如何使用 `tests/demo/email_test_demo/test_email.py` 脚本测试邮件发送功能。
 
 ## 快速开始
 
@@ -14,10 +14,10 @@ cd /data/proj/auto-clock
 source .venv/bin/activate
 
 # 3. 运行测试脚本（使用默认收件人）
-python3 test_email.py
+python3 tests/demo/email_test_demo/test_email.py
 
 # 4. 或指定收件人
-python3 test_email.py --receiver your_email@example.com
+python3 tests/demo/email_test_demo/test_email.py --receiver your_email@example.com
 ```
 
 ## 测试内容
@@ -44,19 +44,19 @@ python3 test_email.py --receiver your_email@example.com
 
 ```bash
 # 查看帮助
-python3 test_email.py --help
+python3 tests/demo/email_test_demo/test_email.py --help
 
 # 指定收件人
-python3 test_email.py --receiver your_email@example.com
+python3 tests/demo/email_test_demo/test_email.py --receiver your_email@example.com
 
 # 跳过网络连接测试
-python3 test_email.py --skip-network
+python3 tests/demo/email_test_demo/test_email.py --skip-network
 
 # 跳过SMTP连接测试
-python3 test_email.py --skip-smtp
+python3 tests/demo/email_test_demo/test_email.py --skip-smtp
 
 # 组合使用
-python3 test_email.py --receiver test@qq.com --skip-network
+python3 tests/demo/email_test_demo/test_email.py --receiver test@qq.com --skip-network
 ```
 
 ## 输出说明

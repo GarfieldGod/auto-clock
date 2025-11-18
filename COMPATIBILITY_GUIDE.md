@@ -75,6 +75,15 @@ chmod +x docker_build.sh
 ./docker_build.sh
 ```
 
+#### 依赖版本说明
+
+Docker打包使用 `requirements-ubuntu20.txt`，其中包含与Ubuntu 20.04 (Python 3.8)兼容的依赖版本：
+- numpy 1.24.4（而非2.2.6）
+- opencv-python 4.8.1.78（而非4.12.0.88）
+- 其他依赖也做了相应降级
+
+这确保了打包的应用可以在Ubuntu 20.04+系统上运行。
+
 #### Docker打包的优势
 
 - ✓ 环境一致性：始终在Ubuntu 20.04环境中打包

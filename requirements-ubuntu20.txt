@@ -1,0 +1,12 @@
+# Ubuntu 20.04 兼容版本的依赖
+# Python 3.8 环境
+
+numpy==1.24.4
+opencv-python==4.8.1.78
+pillow==10.4.0
+selenium==4.15.2
+platformdirs==4.0.0
+PyQt5-Qt5==5.15.2
+PyQt5-sip==12.13.0
+PyQt5==5.15.9
+requests==2.31.0

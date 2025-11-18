@@ -2,6 +2,8 @@ import os
 import platform
 import subprocess
 import re
+import pwd
+import spwd
 from datetime import datetime
 from src.utils.log import Log
 from src.utils.const import AppPath
@@ -382,3 +384,71 @@ def check_auto_login_status():
     except Exception as e:
         Log.error(f"检查自动登录状态时出错：{str(e)}")
         return None, "无法检查状态：未知错误"
+
+
+def validate_linux_credentials(username, password=None):
+    """
+    验证Linux账号密码的有效性
+    :param username: Linux用户名
+    :param password: Linux密码（可选，如果为None则只验证用户存在）
+    :return: (bool, str) - (是否有效, 状态描述)
+    """
+    if not platform.system() == 'Linux':
+        return False, "此功能仅适用于Linux系统"
+    
+    if not username:
+        return False, "用户名不能为空"
+    
+    try:
+        # 检查用户是否存在
+        try:
+            pwd.getpwnam(username)
+            Log.info(f"用户 {username} 存在")
+        except KeyError:
+            return False, f"用户 {username} 不存在"
+        
+        # 如果没有提供密码，只验证用户存在性
+        if not password:
+            return True, f"用户 {username} 存在（密码未验证）"
+        
+        # 验证密码（需要root权限或当前用户权限）
+        try:
+            # 使用su命令验证密码
+            # 注意：这个方法可能需要root权限，或者只能验证当前用户的密码
+            result = subprocess.run(
+                ['su', '-c', 'true', username],
+                input=password,
+                text=True,
+                capture_output=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                return True, f"用户 {username} 密码验证成功"
+            else:
+                return False, f"用户 {username} 密码错误"
+                
+        except subprocess.TimeoutExpired:
+            return False, "密码验证超时"
+        except Exception as e:
+            Log.warning(f"密码验证失败，可能是权限问题：{str(e)}")
+            # 如果密码验证失败，返回部分成功状态
+            return True, f"用户 {username} 存在（密码无法验证，可能需要更高权限）"
+            
+    except Exception as e:
+        Log.error(f"验证Linux账号时出错：{str(e)}")
+        return False, f"验证失败：{str(e)}"
+
+
+def get_linux_credentials_status():
+    """
+    获取当前存储的Linux账号状态
+    :return: (bool, str) - (是否有效, 状态描述)
+    """
+    try:
+        # 这里可以从配置文件读取存储的账号信息
+        # 暂时返回未配置状态
+        return False, "未配置Linux账号信息"
+    except Exception as e:
+        Log.error(f"获取Linux账号状态时出错：{str(e)}")
+        return None, "无法获取账号状态"

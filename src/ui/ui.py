@@ -438,6 +438,43 @@ class ConfigWindow(QMainWindow):
         try:
             if platform.system() != 'Linux':
                 return
+            
+            # 首先验证Linux账号配置
+            credentials_valid = False
+            max_attempts = 3
+            attempt = 0
+            
+            while not credentials_valid and attempt < max_attempts:
+                # 检查当前账号状态
+                login_dlg = LinuxLoginDialog(self)
+                
+                # 如果是第一次尝试，先检查是否已有有效配置
+                if attempt == 0:
+                    is_valid, status_msg = login_dlg.get_credentials_status()
+                    if is_valid:
+                        credentials_valid = True
+                        break
+                
+                # 显示登录对话框要求用户配置或验证账号
+                if login_dlg.exec_() == QDialog.Accepted:
+                    is_valid, status_msg = login_dlg.get_credentials_status()
+                    if is_valid:
+                        credentials_valid = True
+                        break
+                    else:
+                        # 账号无效，询问是否重试
+                        retry = MessageBox(f"账号验证失败：{status_msg}\n\n是否重新配置账号信息？", "账号验证失败", buttons=["重试", "取消"])
+                        if retry != "重试":
+                            return
+                else:
+                    # 用户取消了登录对话框
+                    return
+                
+                attempt += 1
+            
+            if not credentials_valid:
+                MessageBox("账号验证失败次数过多，无法创建任务。请确保Linux账号配置正确后重试。")
+                return
                 
             plan_ui = LinuxPlanDialog(self)
             if plan_ui.exec_() == QDialog.Accepted:
@@ -489,6 +526,7 @@ class ConfigWindow(QMainWindow):
         except Exception as e:
             Log.error(str(e))
             MessageBox(str(e))
+
     
     def update_linux_plan_list(self):
         try:

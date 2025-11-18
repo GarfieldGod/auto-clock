@@ -63,10 +63,21 @@ class Key:
 
 @dataclass
 class AppPath:
-    LogRoot = user_data_dir("log", "auto-clock")
-    DataRoot = user_data_dir("data", "auto-clock")
-    BackupRoot = user_data_dir("backup", "auto-clock")
-    ScreenshotRoot = user_data_dir("screenshot", "auto-clock")
+    if sys.platform.startswith('win'):
+        # Windows: C:/Users/${username}/AppData/Local/auto-clock
+        LogRoot = user_data_dir("log", "auto-clock")
+        DataRoot = user_data_dir("data", "auto-clock")
+        BackupRoot = user_data_dir("backup", "auto-clock")
+        ScreenshotRoot = user_data_dir("screenshot", "auto-clock")
+        AppRoot = os.path.dirname(DataRoot)  # auto-clock根目录
+    else:
+        # Linux/Unix: ~/.local/share/auto-clock
+        AppRoot = user_data_dir("auto-clock", "auto-clock")
+        LogRoot = os.path.join(AppRoot, "log")
+        DataRoot = os.path.join(AppRoot, "data")
+        BackupRoot = os.path.join(AppRoot, "backup")
+        ScreenshotRoot = os.path.join(AppRoot, "screenshot")
+    
     DataJson: str = os.path.join(DataRoot, "data.json")
     TasksJson: str = os.path.join(DataRoot, "tasks.json")
     if hasattr(sys, '_MEIPASS'):

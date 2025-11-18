@@ -1,0 +1,45 @@
+# Dockerfile for building auto-clock on Ubuntu 20.04
+# This ensures compatibility with older Linux systems
+
+FROM ubuntu:20.04
+
+# 设置非交互式安装
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    python3.8 \
+    python3-pip \
+    python3-venv \
+    libxcb-xinerama0 \
+    libxcb-cursor0 \
+    libxcb1-dev \
+    libx11-dev \
+    libxkbcommon-x11-0 \
+    libegl1-mesa-dev \
+    libgl1-mesa-glx \
+    libfontconfig1-dev \
+    libicu-dev \
+    libsqlite3-dev \
+    libxss1 \
+    libgconf-2-4 \
+    libxtst6 \
+    libasound2-dev \
+    libpulse-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# 设置工作目录
+WORKDIR /build
+
+# 复制项目文件
+COPY . /build/
+
+# 安装Python依赖
+RUN pip3 install --upgrade pip && \
+    pip3 install -r requirements.txt && \
+    pip3 install pyinstaller
+
+# 构建脚本
+CMD ["bash", "build_linux.sh"]

@@ -50,29 +50,41 @@ class Key:
     ShowWebPage: str = "show_web_page"
 
     AutoClock: str = "Auto Clock"
-    ShutDownWindows: str = "Shut Down Windows"
-    WindowsSleep: str = "Windows Sleep"
+    ShutDownWindows: str = "Shut Down"
+    WindowsSleep: str = "Sleep"
     # 新增断网和联网操作类型
     DisconnectNetwork: str = "Disconnect Network"
     ConnectNetwork: str = "Connect Network"
 
     DefaultWindowsPlanName: str = "AutoClock_Windows_Plan"
+    DefaultLinuxPlanName: str = "AutoClock_Linux_Plan"
     Unknown: str = "Unknown"
     Empty: str = ""
 
 @dataclass
 class AppPath:
-    LogRoot = user_data_dir("log", "auto-clock")
-    DataRoot = user_data_dir("data", "auto-clock")
-    BackupRoot = user_data_dir("backup", "auto-clock")
-    ScreenshotRoot = user_data_dir("screenshot", "auto-clock")
-    DataJson: str = f"{DataRoot}\\data.json"
-    TasksJson: str = f"{DataRoot}\\tasks.json"
+    if sys.platform.startswith('win'):
+        # Windows: C:/Users/${username}/AppData/Local/auto-clock
+        LogRoot = user_data_dir("log", "auto-clock")
+        DataRoot = user_data_dir("data", "auto-clock")
+        BackupRoot = user_data_dir("backup", "auto-clock")
+        ScreenshotRoot = user_data_dir("screenshot", "auto-clock")
+        AppRoot = os.path.dirname(DataRoot)  # auto-clock根目录
+    else:
+        # Linux/Unix: ~/.local/share/auto-clock
+        AppRoot = user_data_dir("auto-clock", "auto-clock")
+        LogRoot = os.path.join(AppRoot, "log")
+        DataRoot = os.path.join(AppRoot, "data")
+        BackupRoot = os.path.join(AppRoot, "backup")
+        ScreenshotRoot = os.path.join(AppRoot, "screenshot")
+    
+    DataJson: str = os.path.join(DataRoot, "data.json")
+    TasksJson: str = os.path.join(DataRoot, "tasks.json")
     if hasattr(sys, '_MEIPASS'):
         ProjectRoot = sys._MEIPASS
     else:
         ProjectRoot = os.path.abspath(".")
-    ConfigJson: str = f"{ProjectRoot}\\config.json"
+    ConfigJson: str = os.path.join(ProjectRoot, "config.json")
 
 @dataclass
 class WebPath:

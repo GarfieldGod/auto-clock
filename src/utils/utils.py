@@ -35,7 +35,7 @@ class Utils:
         if not os.path.exists(Path(file_path).parent):
             os.makedirs(Path(file_path).parent)
 
-        with open(f"{file_path}", "w", encoding="utf-8") as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
     @staticmethod
@@ -134,9 +134,20 @@ class Utils:
                 raise Exception(message)
             return str(exe_path)
         else:
-            python_exe = Path(__file__).parent.parent.parent / ".venv/Scripts/python.exe"
+            if os.name == 'nt':  # Windows
+                python_exe = Path(__file__).parent.parent.parent / ".venv" / "Scripts" / "python.exe"
+            else:  # Linux
+                python_exe = Path(__file__).parent.parent.parent / ".venv" / "bin" / "python"
             entry_script = Path(__file__).parent.parent.parent / "entry.py"
-            return f'"{python_exe}" "{entry_script}"'
+            
+            # 处理路径中的空格，跨平台方式
+            python_path = str(python_exe)
+            script_path = str(entry_script)
+            
+            if os.name == 'nt':  # Windows使用双引号
+                return f'"{python_path}" "{script_path}"'
+            else:  # Linux不需要引号
+                return f'{python_path} {script_path}'
 
     @staticmethod
     def replace_signs(string):

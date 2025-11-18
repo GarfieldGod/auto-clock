@@ -76,8 +76,9 @@ Auto-Clock - 自动打卡工具
 
     clean_invalid_windows_plan()
 
-    use_gui = not any(vars(args).values()) or args.headless is False
-    if use_gui and not args.headless:
+    # 修复GUI启动逻辑：只有当没有任何参数时才启动GUI
+    use_gui = not any(vars(args).values())
+    if use_gui:
         try:
             app = QApplication(sys.argv)
             window = ConfigWindow()
@@ -101,9 +102,9 @@ Auto-Clock - 自动打卡工具
                 sys.exit(1)
             # 继续执行下面的任务处理代码
     else:
-        # 无头模式或任务模式
+        # 任务模式或无头模式
         if not args.task_id and not args.headless:
-            Log.error("无头模式需要提供task_id参数")
+            Log.error("任务模式需要提供task_id参数")
             Log.error("使用 --help 参数查看所有可用选项")
             sys.exit(1)
 

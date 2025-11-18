@@ -3,6 +3,7 @@ import re
 import subprocess
 import tempfile
 from datetime import datetime
+from pathlib import Path
 
 from src.utils.log import Log
 from src.utils.utils import Utils
@@ -71,9 +72,16 @@ def create_crontab_entry(task_name, task_id, trigger_type, day=None, time=None):
     if not exe_path:
         raise Exception("无法获取执行文件路径")
     
-    command = f"{exe_path} --task_id={task_id}"
+    # 获取项目根目录路径
+    project_root = Path(__file__).parent.parent.parent.absolute()
+    
+    # 构建完整的crontab命令，包含工作目录和环境变量
+    command = f"cd {project_root} && {exe_path} --task_id={task_id}"
+    
     # 确保路径中的空格被正确处理
-    if ' ' in command:
+    if ' ' in str(project_root):
+        command = f"cd \"{project_root}\" && {exe_path} --task_id={task_id}"
+    if ' ' in command and 'cd \"' not in command:
         command = f"\"{command}\""
     
     # 解析时间

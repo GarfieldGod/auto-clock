@@ -174,6 +174,7 @@ Auto-Clock - 自动打卡工具
         Log.info(f"task: {task}")
         Log.info(f"ok: {ok} error: {error}")
         Log.info(f"email: {email} send_email_success: {send_email_success} send_email_failed: {send_email_failed}")
+        
         send_email_by_result(task=task, email=email, send_email_success=send_email_success,
                              send_email_failed=send_email_failed, ok=ok, error=error)
     Log.close()

@@ -37,21 +37,30 @@ class AutoClock:
         self.remote_url = config.remote_url
         self.always_retry = config.always_retry
         self.show_web_page = config.show_web_page
+        self.driver = None
         try:
             self.driver = self.create_driver()
         except Exception as e:
             Log.error(f"Create driver error: {e}")
+            raise Exception(f"Failed to create WebDriver: {e}")
 
     def create_driver(self):
         # 创建浏览器驱动
         opts = Options()
         if not self.show_web_page:
             opts.add_argument("--headless=new")
-        # opts.add_argument("--window-size=1920,1080")
-
+            # 添加headless模式必需的选项
+            opts.add_argument("--no-sandbox")
+            opts.add_argument("--disable-dev-shm-usage")
+            opts.add_argument("--disable-gpu")
+        
+        opts.add_argument("--window-size=1920,1080")
         opts.add_argument("--start-maximized")
         opts.add_argument("--enable-logging")
         opts.add_argument("--v=1")
+        # 禁用一些可能导致问题的功能
+        opts.add_argument("--disable-blink-features=AutomationControlled")
+        
         service = Service(executable_path=self.driver_path)
         driver = webdriver.Edge(service=service, options=opts)
 
@@ -117,7 +126,8 @@ class AutoClock:
             return False, str(e)
 
     def quit(self):
-        self.driver.quit()
+        if self.driver:
+            self.driver.quit()
 
     def auto_clock(self):
         try:
@@ -141,7 +151,7 @@ class AutoClock:
         ok, error = self.auto_clock()
         time.sleep(5)
         Log.info("流程结束，关闭浏览器驱动。")
-        self.driver.quit()
+        self.quit()
         if ok:
             Log.info("最终结果：成功! 结束运行。")
         else:

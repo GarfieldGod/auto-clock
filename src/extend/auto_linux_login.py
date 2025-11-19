@@ -4,6 +4,7 @@ import subprocess
 import re
 import pwd
 import spwd
+import tempfile
 from datetime import datetime
 from src.utils.log import Log
 from src.utils.const import AppPath
@@ -153,16 +154,41 @@ def set_lightdm_auto_login(username, enabled=True):
     
     try:
         # 写入配置文件（需要root权限）
-        cmd = f'echo "{config_content}" | sudo tee {config_path}'
-        subprocess.run(cmd, shell=True, check=True)
-        Log.info("LightDM自动登录配置已更新")
+        # 使用临时文件避免echo处理多行文本的问题
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.conf', encoding='utf-8') as tmp_file:
+            tmp_file.write(config_content)
+            tmp_path = tmp_file.name
+        
+        try:
+            # 使用pkexec替代sudo，它会弹出图形化密码对话框
+            result = subprocess.run(['pkexec', 'cp', tmp_path, config_path], 
+                                   capture_output=True, text=True, check=True)
+            Log.info("LightDM自动登录配置已更新")
+        finally:
+            # 清理临时文件
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        
         return backup_file
+    except subprocess.CalledProcessError as e:
+        # 记录详细错误信息
+        Log.error(f"执行命令失败: {e.cmd}")
+        Log.error(f"返回码: {e.returncode}")
+        Log.error(f"标准输出: {e.stdout}")
+        Log.error(f"标准错误: {e.stderr}")
+        # 恢复备份
+        if os.path.exists(backup_file):
+            try:
+                subprocess.run(['pkexec', 'cp', backup_file, config_path])
+                Log.info("已恢复配置文件备份")
+            except:
+                pass
+        throw_exception(f"配置LightDM自动登录失败：{e.stderr if e.stderr else str(e)}")
     except Exception as e:
         # 恢复备份
         if os.path.exists(backup_file):
             try:
-                cmd = f'sudo cp {backup_file} {config_path}'
-                subprocess.run(cmd, shell=True)
+                subprocess.run(['pkexec', 'cp', backup_file, config_path])
                 Log.info("已恢复配置文件备份")
             except:
                 pass
@@ -215,16 +241,41 @@ def set_gdm_auto_login(username, enabled=True):
     
     try:
         # 写入配置文件（需要root权限）
-        cmd = f'echo "{config_content}" | sudo tee {config_path}'
-        subprocess.run(cmd, shell=True, check=True)
-        Log.info("GDM自动登录配置已更新")
+        # 使用临时文件避免echo处理多行文本的问题
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.conf', encoding='utf-8') as tmp_file:
+            tmp_file.write(config_content)
+            tmp_path = tmp_file.name
+        
+        try:
+            # 使用pkexec替代sudo，它会弹出图形化密码对话框
+            result = subprocess.run(['pkexec', 'cp', tmp_path, config_path], 
+                                   capture_output=True, text=True, check=True)
+            Log.info("GDM自动登录配置已更新")
+        finally:
+            # 清理临时文件
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        
         return backup_file
+    except subprocess.CalledProcessError as e:
+        # 记录详细错误信息
+        Log.error(f"执行命令失败: {e.cmd}")
+        Log.error(f"返回码: {e.returncode}")
+        Log.error(f"标准输出: {e.stdout}")
+        Log.error(f"标准错误: {e.stderr}")
+        # 恢复备份
+        if os.path.exists(backup_file):
+            try:
+                subprocess.run(['pkexec', 'cp', backup_file, config_path])
+                Log.info("已恢复配置文件备份")
+            except:
+                pass
+        throw_exception(f"配置GDM自动登录失败：{e.stderr if e.stderr else str(e)}")
     except Exception as e:
         # 恢复备份
         if os.path.exists(backup_file):
             try:
-                cmd = f'sudo cp {backup_file} {config_path}'
-                subprocess.run(cmd, shell=True)
+                subprocess.run(['pkexec', 'cp', backup_file, config_path])
                 Log.info("已恢复配置文件备份")
             except:
                 pass
@@ -278,16 +329,41 @@ def set_sddm_auto_login(username, enabled=True):
     
     try:
         # 写入配置文件（需要root权限）
-        cmd = f'echo "{config_content}" | sudo tee {config_path}'
-        subprocess.run(cmd, shell=True, check=True)
-        Log.info("SDDM自动登录配置已更新")
+        # 使用临时文件避免echo处理多行文本的问题
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.conf', encoding='utf-8') as tmp_file:
+            tmp_file.write(config_content)
+            tmp_path = tmp_file.name
+        
+        try:
+            # 使用pkexec替代sudo，它会弹出图形化密码对话框
+            result = subprocess.run(['pkexec', 'cp', tmp_path, config_path], 
+                                   capture_output=True, text=True, check=True)
+            Log.info("SDDM自动登录配置已更新")
+        finally:
+            # 清理临时文件
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        
         return backup_file
+    except subprocess.CalledProcessError as e:
+        # 记录详细错误信息
+        Log.error(f"执行命令失败: {e.cmd}")
+        Log.error(f"返回码: {e.returncode}")
+        Log.error(f"标准输出: {e.stdout}")
+        Log.error(f"标准错误: {e.stderr}")
+        # 恢复备份
+        if os.path.exists(backup_file):
+            try:
+                subprocess.run(['pkexec', 'cp', backup_file, config_path])
+                Log.info("已恢复配置文件备份")
+            except:
+                pass
+        throw_exception(f"配置SDDM自动登录失败：{e.stderr if e.stderr else str(e)}")
     except Exception as e:
         # 恢复备份
         if os.path.exists(backup_file):
             try:
-                cmd = f'sudo cp {backup_file} {config_path}'
-                subprocess.run(cmd, shell=True)
+                subprocess.run(['pkexec', 'cp', backup_file, config_path])
                 Log.info("已恢复配置文件备份")
             except:
                 pass

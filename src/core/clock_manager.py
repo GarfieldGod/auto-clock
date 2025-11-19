@@ -1,6 +1,5 @@
 import os
 import json
-import sys
 
 from src.utils.log import Log
 from src.utils.utils import Utils

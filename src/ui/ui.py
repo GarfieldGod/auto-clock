@@ -46,7 +46,10 @@ class ConfigWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setFixedSize(500, 800)
+        # 设置最小尺寸，允许纵向拉伸
+        self.setMinimumSize(500, 800)
+        # 固定宽度，允许高度调整
+        self.setMaximumWidth(500)
         self.setWindowTitle("Auto-Clock")
         self.setWindowIcon(QIcon(Utils.get_ico_path()))
         self.setStyleSheet(f"""
@@ -205,26 +208,40 @@ class ConfigWindow(QMainWindow):
             self.widget_linux_plan_list = QListWidget()
             layout_system.addWidget(QLabel("Linux Plan List:"))
             layout_system.addWidget(self.widget_linux_plan_list)
-            widget_linux_plan_buttons = QWidget()
+            
+            # 创建紧凑的2x2按钮布局
+            buttons_container = QWidget()
+            buttons_grid = QVBoxLayout(buttons_container)
+            buttons_grid.setSpacing(5)
+            buttons_grid.setContentsMargins(0, 0, 0, 0)
+            
+            # 第一行：Create 和 Delete
+            row1_widget = QWidget()
+            row1_layout = QHBoxLayout(row1_widget)
+            row1_layout.setSpacing(5)
+            row1_layout.setContentsMargins(0, 0, 0, 0)
             self.button_linux_create = QPushButton("Create")
             self.button_linux_create.clicked.connect(self.create_linux_plan)
             self.button_linux_delete = QPushButton("Delete")
             self.button_linux_delete.clicked.connect(self.delete_linux_plan)
-            layout_linux_plan_buttons = QHBoxLayout(widget_linux_plan_buttons)
-            layout_linux_plan_buttons.addWidget(self.button_linux_create)
-            layout_linux_plan_buttons.addWidget(self.button_linux_delete)
-            layout_system.addWidget(widget_linux_plan_buttons)
+            row1_layout.addWidget(self.button_linux_create)
+            row1_layout.addWidget(self.button_linux_delete)
             
-            # 添加Linux网络控制按钮
+            # 第二行：立即断网 和 立即联网
+            row2_widget = QWidget()
+            row2_layout = QHBoxLayout(row2_widget)
+            row2_layout.setSpacing(5)
+            row2_layout.setContentsMargins(0, 0, 0, 0)
             self.button_disconnect_network = QPushButton("立即断网")
             self.button_disconnect_network.clicked.connect(self.disconnect_network_now)
             self.button_connect_network = QPushButton("立即联网")
             self.button_connect_network.clicked.connect(self.connect_network_now)
-            network_buttons_widget = QWidget()
-            network_buttons_layout = QHBoxLayout(network_buttons_widget)
-            network_buttons_layout.addWidget(self.button_disconnect_network)
-            network_buttons_layout.addWidget(self.button_connect_network)
-            layout_system.addWidget(network_buttons_widget)
+            row2_layout.addWidget(self.button_disconnect_network)
+            row2_layout.addWidget(self.button_connect_network)
+            
+            buttons_grid.addWidget(row1_widget)
+            buttons_grid.addWidget(row2_widget)
+            layout_system.addWidget(buttons_container)
 
 
         # Confirm or Try

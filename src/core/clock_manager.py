@@ -1,9 +1,5 @@
 import os
 import json
-import sys
-import platform
-
-from numpy.ma.core import inner
 
 from src.utils.log import Log
 # from test.test import run_test
@@ -20,21 +16,23 @@ class ClockManager:
 
             with open(f"{AppPath.DataJson}", "r", encoding="utf-8") as f:
                 data = json.load(f)
-                inner_driver_path = get_driver_path()
-                if inner_driver_path:
-                    data[Key.DriverPath] = inner_driver_path
+                
+                # 用户必须配置driver路径
+                self.driver_path = data.get(Key.DriverPath)
+                
+                if not self.driver_path or self.driver_path == Key.Empty:
+                    Log.error("未配置driver路径，请在配置文件中指定msedgedriver的完整路径")
+                    Log.error("参考文档: DRIVER_SETUP_GUIDE.md")
+                    raise Exception("未配置driver路径")
+                
+                Log.info(f"使用driver: {self.driver_path}")
+                
                 ok = ClockManager.check_data(data)
                 if not ok:
                     raise Exception("Check data error.")
+                    
                 self.user_name = data[Key.UserName]
                 self.user_password = data[Key.UserPassword]
-                self.driver_path = data[Key.DriverPath]
-                if self.driver_path is None:
-                    self.driver_path = get_driver_path()
-                if self.driver_path is None:
-                    Log.error("Driver Path Error")
-                    raise Exception("No driver path")
-
                 self.always_retry = data.get(Key.AlwaysRetry, False)
                 self.captcha_retry_times = int(data.get(Key.CaptchaRetryTimes, 5))
                 self.captcha_tolerance_angle = int(data.get(Key.CaptchaToleranceAngle, 5))
@@ -102,31 +100,3 @@ def run_clock(is_test=False):
             return True, None
     except Exception as e:
         return False, str(e)
-
-def get_driver_path(driver_name=None):
-    # 根据操作系统自动选择驱动路径
-    if driver_name is None:
-        system = platform.system()
-        if system == "Windows":
-            driver_name = os.path.join("windows", "msedgedriver.exe")
-        elif system == "Linux":
-            driver_name = os.path.join("linux", "msedgedriver")
-        elif system == "Darwin":  # macOS
-            driver_name = os.path.join("linux", "msedgedriver")  # 或者添加专门的macOS驱动
-        else:
-            raise OSError(f"不支持的操作系统: {system}")
-    
-    if hasattr(sys, "_MEIPASS"):
-        Log.info(f"Release mode, OS: {platform.system()}")
-        driver_dir = os.path.join(sys._MEIPASS, "drivers")
-    else:
-        Log.info("Debug mode")
-        return None
-
-    driver_path = os.path.join(driver_dir, driver_name)
-    Log.info(f"Driver path: {driver_path}")
-
-    if not os.path.exists(driver_path):
-        raise FileNotFoundError(f"驱动文件不存在: {driver_path}")
-
-    return driver_path

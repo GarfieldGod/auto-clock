@@ -59,4 +59,4 @@ RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install pyinstaller
 
 # 构建脚本，并修复生成文件的权限
-CMD bash build_linux.sh && chmod -R 777 /build/dist
+CMD bash linux_build.sh && chmod -R 777 /build/dist

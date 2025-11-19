@@ -12,11 +12,8 @@ main_script = os.path.join(project_root, "entry.py")
 
 # 依赖的额外文件
 extra_files = []
-drivers_dir = os.path.join(project_root, "drivers")
 config_dir = os.path.join(project_root, "config.json")
 
-if os.path.exists(drivers_dir):
-    extra_files.append((str(drivers_dir), "drivers"))
 if os.path.exists(config_dir):
     extra_files.append((str(config_dir), "."))
 

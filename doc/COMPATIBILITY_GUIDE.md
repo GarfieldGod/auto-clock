@@ -55,7 +55,7 @@ pip3 install -r requirements.txt
 pip3 install pyinstaller
 
 # 5. 打包
-./build_linux.sh
+./linux_build.sh
 ```
 
 ### 方案2：使用Docker打包（最佳实践）

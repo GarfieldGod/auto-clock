@@ -48,12 +48,12 @@ pip install pyinstaller
 
 1. 给脚本添加执行权限：
 ```bash
-chmod +x build_linux.sh
+chmod +x linux_build.sh
 ```
 
 2. 运行打包脚本：
 ```bash
-./build_linux.sh
+./linux_build.sh
 ```
 
 3. 打包完成后，可执行文件位于 `dist/auto_clock`

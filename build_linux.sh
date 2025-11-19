@@ -28,7 +28,11 @@ fi
 # 清理之前的构建
 echo ""
 echo "清理之前的构建文件..."
-rm -rf build dist
+rm -rf build
+# 清理dist目录内容，但保留目录本身（因为可能被Docker挂载）
+if [ -d "dist" ]; then
+    rm -rf dist/* 2>/dev/null || true
+fi
 
 # 开始打包
 echo ""

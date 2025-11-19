@@ -1,6 +1,7 @@
 import os
 import json
 import sys
+import platform
 
 from numpy.ma.core import inner
 
@@ -102,17 +103,30 @@ def run_clock(is_test=False):
     except Exception as e:
         return False, str(e)
 
-def get_driver_path(driver_name="Edge_Driver\\msedgedriver.exe"):
+def get_driver_path(driver_name=None):
+    # 根据操作系统自动选择驱动路径
+    if driver_name is None:
+        system = platform.system()
+        if system == "Windows":
+            driver_name = os.path.join("windows", "msedgedriver.exe")
+        elif system == "Linux":
+            driver_name = os.path.join("linux", "msedgedriver")
+        elif system == "Darwin":  # macOS
+            driver_name = os.path.join("linux", "msedgedriver")  # 或者添加专门的macOS驱动
+        else:
+            raise OSError(f"不支持的操作系统: {system}")
+    
     if hasattr(sys, "_MEIPASS"):
-        Log.info("Release mode")
+        Log.info(f"Release mode, OS: {platform.system()}")
         driver_dir = os.path.join(sys._MEIPASS, "drivers")
     else:
         Log.info("Debug mode")
         return None
 
     driver_path = os.path.join(driver_dir, driver_name)
+    Log.info(f"Driver path: {driver_path}")
 
     if not os.path.exists(driver_path):
-        raise FileNotFoundError(f"驱动文件不存在：{driver_path}")
+        raise FileNotFoundError(f"驱动文件不存在: {driver_path}")
 
     return driver_path

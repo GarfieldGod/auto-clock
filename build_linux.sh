@@ -38,6 +38,11 @@ pyinstaller pack_linux.spec
 # 检查打包是否成功
 if [ -f "dist/auto_clock" ]; then
     echo ""
+    echo "设置驱动文件执行权限..."
+    # 查找并设置所有msedgedriver文件的执行权限
+    find dist -name "msedgedriver" -type f -exec chmod +x {} \;
+    
+    echo ""
     echo "================================"
     echo "打包成功！"
     echo "================================"
@@ -56,7 +61,7 @@ if [ -f "dist/auto_clock" ]; then
     echo ""
     echo "注意事项:"
     echo "  - 首次运行需要配置 config.json"
-    echo "  - 确保 drivers/linux/msedgedriver 有执行权限"
+    echo "  - 驱动文件执行权限已自动设置"
     echo "  - 某些操作可能需要 sudo 权限"
     echo ""
 else

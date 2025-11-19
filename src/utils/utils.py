@@ -7,6 +7,9 @@ import requests
 import platform
 from pathlib import Path
 
+from webdriver_manager.core.driver_cache import DriverCacheManager
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
+
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QLabel
 
@@ -176,6 +179,33 @@ class Utils:
         except ValueError as e:
             Log.error(f"时间格式错误！请输入 'HH:MM' 或 'H:M' 格式，错误原因：{str(e)}")
             return None
+
+    @staticmethod
+    def download_edge_web_driver():
+        try:
+            if os.path.exists(AppPath.DriversRoot):
+                os.makedirs(AppPath.DriversRoot,exist_ok=True)
+
+            driver_cache = DriverCacheManager(
+                root_dir=AppPath.DriversRoot
+            )
+
+            Log.info("Start to download Edge Web Driver...")
+            driver_path = EdgeChromiumDriverManager(
+                url="https://msedgedriver.microsoft.com/",
+                latest_release_url="https://msedgedriver.microsoft.com/LATEST_RELEASE",
+                cache_manager=driver_cache
+            ).install()
+
+            if not driver_path or not os.path.exists(driver_path):
+                raise Exception("Driver path is invalid after download.")
+
+            Log.info(f'DownLoad driver success, path: {driver_path}')
+        except Exception as e:
+            Log.error(f'DownLoad driver failed: {e}')
+            return False, str(e)
+
+        return True, driver_path
 
 class QtUI:
     @staticmethod

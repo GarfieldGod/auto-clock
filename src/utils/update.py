@@ -15,6 +15,7 @@ def check_update():
     Log.info(AppPath.ConfigJson)
     config_dict = Utils.read_dict_from_json(AppPath.ConfigJson)
     if not config_dict: return False
+
     local_ver = config_dict[0].get("version")
     Log.info(f"Current local version: {local_ver}")
     if not local_ver: 
@@ -22,7 +23,8 @@ def check_update():
     try:
         try:
             response = requests.get(WebPath.AppConfigPathGitHub, timeout=1)
-        except requests.exceptions.Timeout:
+        except Exception as e:
+            Log.info(f"GitHub 版本检测失败，尝试使用 Gitee 进行版本检测：{e}")
             response = requests.get(WebPath.AppConfigPathGitee, timeout=3)
         if not response: 
             return False, {}

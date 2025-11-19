@@ -68,6 +68,7 @@ class AppPath:
         LogRoot = user_data_dir("log", "auto-clock")
         DataRoot = user_data_dir("data", "auto-clock")
         BackupRoot = user_data_dir("backup", "auto-clock")
+        DriversRoot = user_data_dir("driver", "auto-clock")
         ScreenshotRoot = user_data_dir("screenshot", "auto-clock")
         AppRoot = os.path.dirname(DataRoot)  # auto-clock根目录
     else:
@@ -76,6 +77,7 @@ class AppPath:
         LogRoot = os.path.join(AppRoot, "log")
         DataRoot = os.path.join(AppRoot, "data")
         BackupRoot = os.path.join(AppRoot, "backup")
+        DriversRoot = os.path.join(AppRoot, "driver")
         ScreenshotRoot = os.path.join(AppRoot, "screenshot")
     
     DataJson: str = os.path.join(DataRoot, "data.json")

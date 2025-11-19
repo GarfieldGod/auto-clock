@@ -16,7 +16,7 @@ from src.utils.const import Key, AppPath, WebPath
 from src.ui.ui_message import MessageBox
 from src.utils.update import VersionCheckThread
 from src.utils.utils import Utils, QtUI
-from src.core.clock_manager import ClockManager, run_clock, get_driver_path
+from src.core.clock_manager import ClockManager, run_clock
 
 # 根据操作系统导入相应的模块
 if platform.system() == 'Windows':
@@ -309,15 +309,6 @@ class ConfigWindow(QMainWindow):
 
     def load(self):
         try:
-            inner_driver = None
-            try:
-                inner_driver = get_driver_path()
-            except Exception as e:
-                MessageBox(f"内置浏览器驱动展开失败，请自行下载并设置edge浏览器驱动位置!\nError: {e}")
-            if inner_driver is not None:
-                self.driver_path.setText(inner_driver)
-                self.driver_path.setEnabled(False)
-
             if not os.path.exists(AppPath.DataJson):
                 return False
 
@@ -332,8 +323,16 @@ class ConfigWindow(QMainWindow):
             self.send_email_failed.setChecked(data.get(Key.SendEmailWhenFailed, False))
             self.send_email_success.setChecked(data.get(Key.SendEmailWhenSuccess, False))
             self.notification_email.setText(data.get(Key.NotificationEmail, Key.Empty))
-            if inner_driver is None:
-                self.driver_path.setText(data.get(Key.DriverPath, Key.Empty))
+
+            driver_path = data.get(Key.DriverPath, Key.Empty)
+            if driver_path == Key.Empty:
+                ok, data = Utils.download_edge_web_driver()
+                if ok:
+                    driver_path = data
+                else:
+                    MessageBox(f"内置浏览器驱动下载失败，请自行下载并设置edge浏览器驱动位置!\nError: {data}")
+
+            self.driver_path.setText(driver_path)
             return True
         except Exception as e:
             MessageBox(f"Load Data Failed!\nError: {e}")

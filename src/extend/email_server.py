@@ -199,7 +199,7 @@ def get_info_html(task, device_info, ip_info):
       </tr>
       <tr>
         <td style="text-align: left; font-weight: normal; padding-right: 8px;">SCHEDULED TIME:</td>
-        <td>{f'{task.get(Key.ExecuteTime, Key.Unknown)}{'' if not task.get(Key.TimeOffset) else f' - {Utils.hour_min_str_add_seconds(task.get(Key.ExecuteTime), task.get(Key.TimeOffset))}'}'}</td>
+        <td>{f"{task.get(Key.ExecuteTime, Key.Unknown)}{'' if not task.get(Key.TimeOffset) else f' - {Utils.hour_min_str_add_seconds(task.get(Key.ExecuteTime), task.get(Key.TimeOffset))}'}"}</td>
       </tr>
       <tr>
         <td style="text-align: left; font-weight: normal; padding-right: 8px;">ACTUAL FINISHED:</td>

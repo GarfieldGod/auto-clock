@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import subprocess
 import tempfile
 from datetime import datetime
@@ -71,15 +72,14 @@ def create_crontab_entry(task_name, task_id, trigger_type, day=None, time=None):
     exe_path = Utils.get_execute_file()
     if not exe_path:
         raise Exception("无法获取执行文件路径")
+
+    # 构建crontab执行命令，设置必要的环境变量
+    home_dir = os.path.expanduser("~")
+    path_env = os.environ.get('PATH', '/usr/local/bin:/usr/bin:/bin')
+    user = os.environ.get('USER', os.environ.get('LOGNAME', 'user'))
     
-    # 获取项目根目录路径
-    project_root = Path(__file__).parent.parent.parent.absolute()
-    
-    # 构建完整的crontab命令，包含工作目录和环境变量
-    if ' ' in str(project_root):
-        command = f"cd \"{project_root}\" && {exe_path} --task_id={task_id}"
-    else:
-        command = f"cd {project_root} && {exe_path} --task_id={task_id}"
+    # 构建完整的命令，包含环境变量设置
+    command = f'PATH={path_env} HOME={home_dir} USER={user} DISPLAY=:1 {exe_path} --task_id={task_id}'
     
     # 解析时间
     try:

@@ -563,8 +563,19 @@ class ConfigWindow(QMainWindow):
                     Key.TimeOffset: value.get(Key.TimeOffset, 0)
                 }
                 
-                # 对于Linux crontab任务，我们需要保存ExecuteDay
+                # 处理执行日期
                 execute_day = value.get(Key.ExecuteDay)
+                
+                # 处理Weekly类型的多选
+                if trigger_type == Key.Weekly:
+                    weekly_dates = value.get(Key.Weekly)
+                    if weekly_dates and len(weekly_dates) > 0:
+                        # 将多个星期几用逗号连接
+                        dates_str = weekly_dates[0]
+                        for i in range(1, len(weekly_dates)):
+                            dates_str += "," + weekly_dates[i]
+                        execute_day = dates_str
+                
                 if execute_day:
                     task[Key.ExecuteDay] = execute_day
                 

@@ -17,9 +17,6 @@ class ClockManager:
             with open(f"{AppPath.DataJson}", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-                ret, inner_driver_path = Utils.download_edge_web_driver()
-                if ret:
-                    data[Key.DriverPath] = inner_driver_path
                 check_ret = ClockManager.check_data(data)
                 if not check_ret:
                     raise Exception("Check data error.")

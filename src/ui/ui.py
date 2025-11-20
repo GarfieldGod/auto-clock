@@ -513,7 +513,9 @@ class ConfigWindow(QMainWindow):
                     Key.TriggerType: trigger_type,
                     Key.ExecuteTime: execute_time,
                     Key.Hour: value.get(Key.Hour),
-                    Key.Minute: value.get(Key.Minute)
+                    Key.Minute: value.get(Key.Minute),
+                    Key.DayTimeType: value.get(Key.DayTimeType),
+                    Key.TimeOffset: value.get(Key.TimeOffset, 0)
                 }
                 
                 # 对于Linux crontab任务，我们需要保存ExecuteDay

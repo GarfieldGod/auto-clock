@@ -3,7 +3,6 @@ import platform
 import subprocess
 import re
 import pwd
-import spwd
 import tempfile
 from datetime import datetime
 from src.utils.log import Log
@@ -171,11 +170,6 @@ def set_lightdm_auto_login(username, enabled=True):
         
         return backup_file
     except subprocess.CalledProcessError as e:
-        # 记录详细错误信息
-        Log.error(f"执行命令失败: {e.cmd}")
-        Log.error(f"返回码: {e.returncode}")
-        Log.error(f"标准输出: {e.stdout}")
-        Log.error(f"标准错误: {e.stderr}")
         # 恢复备份
         if os.path.exists(backup_file):
             try:
@@ -258,11 +252,6 @@ def set_gdm_auto_login(username, enabled=True):
         
         return backup_file
     except subprocess.CalledProcessError as e:
-        # 记录详细错误信息
-        Log.error(f"执行命令失败: {e.cmd}")
-        Log.error(f"返回码: {e.returncode}")
-        Log.error(f"标准输出: {e.stdout}")
-        Log.error(f"标准错误: {e.stderr}")
         # 恢复备份
         if os.path.exists(backup_file):
             try:
@@ -346,11 +335,6 @@ def set_sddm_auto_login(username, enabled=True):
         
         return backup_file
     except subprocess.CalledProcessError as e:
-        # 记录详细错误信息
-        Log.error(f"执行命令失败: {e.cmd}")
-        Log.error(f"返回码: {e.returncode}")
-        Log.error(f"标准输出: {e.stdout}")
-        Log.error(f"标准错误: {e.stderr}")
         # 恢复备份
         if os.path.exists(backup_file):
             try:

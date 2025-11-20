@@ -83,6 +83,15 @@ class ConfigWindow(QMainWindow):
         self.notification_email = QLineEdit()
         self.captcha_tolerance_angle = QLineEdit()
         self.driver_path = QLineEdit()
+        
+        # 创建driver下载按钮
+        self.download_driver_btn = QPushButton()
+        self.download_driver_btn.setFixedSize(24, 24)
+        self.download_driver_btn.setStyleSheet("border: none; background-color: transparent;")
+        self.download_driver_btn.setText("⬇")
+        self.download_driver_btn.setToolTip("自动下载匹配Driver")
+        self.download_driver_btn.clicked.connect(self.download_driver)
+        
         self.always_retry_check_box = QCheckBox()
         self.send_email_success = QCheckBox()
         self.send_email_failed = QCheckBox()
@@ -109,8 +118,19 @@ class ConfigWindow(QMainWindow):
         layout_user.addLayout(layout_username)
         layout_user.addLayout(layout_password)
         layout_function.addLayout(layout_user)
-        layout_function.addWidget(QLabel("edge driver path:"))
-        layout_function.addWidget(self.driver_path)
+        
+        # 创建driver path输入的垂直布局
+        layout_driver = QVBoxLayout()
+        layout_driver.addWidget(QLabel("edge driver path:"))
+        
+        # 创建水平布局来容纳driver path输入框和下载按钮
+        driver_input_layout = QHBoxLayout()
+        driver_input_layout.addWidget(self.driver_path)
+        driver_input_layout.addWidget(self.download_driver_btn)
+        driver_input_layout.setContentsMargins(0, 0, 0, 0)
+        
+        layout_driver.addLayout(driver_input_layout)
+        layout_function.addLayout(layout_driver)
 
         # Captcha Config
         group_sys = QGroupBox("Captcha Config")
@@ -342,13 +362,6 @@ class ConfigWindow(QMainWindow):
             self.notification_email.setText(data.get(Key.NotificationEmail, Key.Empty))
 
             driver_path = data.get(Key.DriverPath, Key.Empty)
-            if driver_path == Key.Empty:
-                ok, data = Utils.download_edge_web_driver()
-                if ok:
-                    driver_path = data
-                else:
-                    MessageBox(f"内置浏览器驱动下载失败，请自行下载并设置edge浏览器驱动位置!\nError: {data}")
-
             self.driver_path.setText(driver_path)
             return True
         except Exception as e:
@@ -376,6 +389,38 @@ class ConfigWindow(QMainWindow):
             self.user_password.setEchoMode(QLineEdit.Password)
             self.show_password_btn.setText("🔒")
             self.show_password_btn.setToolTip("显示密码")
+            
+    def download_driver(self):
+        """手动下载Edge Driver"""
+        try:
+            # 禁用按钮，防止重复点击
+            self.download_driver_btn.setEnabled(False)
+            self.download_driver_btn.setText("⏳")
+            self.download_driver_btn.setToolTip("正在下载...")
+            
+            # 强制更新UI
+            QApplication.processEvents()
+            
+            Log.info("开始手动下载Edge Driver...")
+            ok, result = Utils.download_edge_web_driver()
+            
+            if ok:
+                # 下载成功，更新driver_path输入框
+                self.driver_path.setText(result)
+                MessageBox(f"Driver下载成功！\n路径: {result}")
+                Log.info(f"Driver下载成功: {result}")
+            else:
+                # 下载失败，显示错误信息
+                MessageBox(f"Driver下载失败！\n错误: {result}")
+                Log.error(f"Driver下载失败: {result}")
+        except Exception as e:
+            MessageBox(f"Driver下载过程中发生异常！\n错误: {str(e)}")
+            Log.error(f"Driver下载异常: {str(e)}")
+        finally:
+            # 恢复按钮状态
+            self.download_driver_btn.setEnabled(True)
+            self.download_driver_btn.setText("⬇")
+            self.download_driver_btn.setToolTip("自动下载匹配Driver")
             
     def disconnect_network_now(self):
         try:

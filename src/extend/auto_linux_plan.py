@@ -105,14 +105,28 @@ def create_crontab_entry(task_name, task_id, trigger_type, day=None, time=None):
         # 每周任务
         # 转换星期几为crontab格式 (0=周日, 1=周一, ..., 6=周六)
         week_map = {
+            'Mon': '1', 'Tue': '2', 'Wed': '3',
+            'Thu': '4', 'Fri': '5', 'Sat': '6', 'Sun': '0',
             'Monday': '1', 'Tuesday': '2', 'Wednesday': '3',
             'Thursday': '4', 'Friday': '5', 'Saturday': '6', 'Sunday': '0'
         }
-        # 支持数字格式
-        if day.isdigit():
+        
+        # 支持多个星期几(逗号分隔)
+        if ',' in day:
+            days = [d.strip() for d in day.split(',')]
+            cron_days = []
+            for d in days:
+                if d.isdigit():
+                    cron_days.append(d)
+                else:
+                    cron_day = week_map.get(d.capitalize(), week_map.get(d, d))
+                    cron_days.append(cron_day)
+            cron_expr = f"{minute} {hour} * * {','.join(cron_days)} {command}"
+        # 支持单个星期几
+        elif day.isdigit():
             cron_expr = f"{minute} {hour} * * {day} {command}"
         else:
-            cron_day = week_map.get(day.capitalize(), day)
+            cron_day = week_map.get(day.capitalize(), week_map.get(day, day))
             cron_expr = f"{minute} {hour} * * {cron_day} {command}"
     elif trigger_type == Key.Monthly and day:
         # 每月任务

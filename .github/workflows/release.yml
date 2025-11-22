@@ -1,0 +1,137 @@
+name: Build and Release
+
+on:
+  # 手动触发
+  workflow_dispatch:
+
+  # 推 tag 时自动运行
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  get-version:
+    name: Get App Info
+    runs-on: ubuntu-latest
+    outputs:
+      app_name: ${{ steps.get_info.outputs.app_name }}
+      version: ${{ steps.get_info.outputs.version }}
+      full_name: ${{ steps.get_info.outputs.full_name }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        
+      - name: Get App Info from config.json
+        id: get_info
+        run: |
+          APP_NAME=$(jq -r '.[0].app' config.json)
+          VERSION=$(jq -r '.[0].version' config.json)
+          FULL_NAME="${APP_NAME}-${VERSION}"
+          echo "app_name=${APP_NAME}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "full_name=${FULL_NAME}" >> $GITHUB_OUTPUT
+          echo "App: ${APP_NAME}, Version: ${VERSION}"
+
+  build-windows:
+    name: Build on Windows
+    runs-on: windows-latest
+    needs: get-version
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller pack.spec
+
+      - name: Rename Windows output
+        run: |
+          cd dist
+          ren auto_clock.exe "${{ needs.get-version.outputs.full_name }}-windows.exe"
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.get-version.outputs.full_name }}-windows
+          path: dist/
+
+  build-linux:
+    name: Build on Linux with Docker
+    runs-on: ubuntu-latest
+    needs: get-version
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t build-linux -f Dockerfile.build .
+
+      - name: Run Docker build to create binaries
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            --user $(id -u):$(id -g) \
+            build-linux \
+            bash linux_build.sh
+
+      - name: Rename Linux output
+        run: |
+          cd dist
+          mv auto_clock "${{ needs.get-version.outputs.full_name }}-linux"
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.get-version.outputs.full_name }}-linux
+          path: dist/
+
+  release:
+    name: Create Release
+    needs: [get-version, build-windows, build-linux]
+    runs-on: ubuntu-latest
+
+    # 只有 push Tag 的时候才执行 release
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: packaged
+
+      - name: Display downloaded artifacts
+        run: |
+          echo "Artifacts structure:"
+          find packaged -type f -name "*" | sort
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ needs.get-version.outputs.full_name }}
+          body: |
+            Automated release for ${{ needs.get-version.outputs.app_name }} version ${{ needs.get-version.outputs.version }}
+            
+            Build triggered by tag: ${{ github.ref_name }}
+          files: |
+            packaged/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

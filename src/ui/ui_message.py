@@ -17,6 +17,8 @@ class MessageBox(QDialog):
         font.setPointSize(10)
         label.setFont(font)
         label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        # 允许文本选择和复制
+        label.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
 
         layout_center_label = QHBoxLayout()
         layout_center_label.addStretch(1)

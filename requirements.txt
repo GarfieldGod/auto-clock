@@ -5,3 +5,4 @@ selenium==4.37.0
 platformdirs==4.3.8
 PyQt5==5.15.11
 requests~=2.32.5
+webdriver_manager==4.0.2

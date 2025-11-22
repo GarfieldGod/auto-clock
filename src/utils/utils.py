@@ -1,9 +1,14 @@
 import os
 import sys
 import json
+from datetime import datetime, timedelta
+
 import requests
 import platform
 from pathlib import Path
+
+from webdriver_manager.core.driver_cache import DriverCacheManager
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QLabel
@@ -33,7 +38,7 @@ class Utils:
         if not os.path.exists(Path(file_path).parent):
             os.makedirs(Path(file_path).parent)
 
-        with open(f"{file_path}", "w", encoding="utf-8") as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
     @staticmethod
@@ -132,9 +137,75 @@ class Utils:
                 raise Exception(message)
             return str(exe_path)
         else:
-            python_exe = Path(__file__).parent.parent.parent / ".venv/Scripts/python.exe"
+            if os.name == 'nt':  # Windows
+                python_exe = Path(__file__).parent.parent.parent / ".venv" / "Scripts" / "python.exe"
+            else:  # Linux
+                python_exe = Path(__file__).parent.parent.parent / ".venv" / "bin" / "python"
             entry_script = Path(__file__).parent.parent.parent / "entry.py"
-            return f'"{python_exe}" "{entry_script}"'
+            
+            # 处理路径中的空格，跨平台方式
+            python_path = str(python_exe)
+            script_path = str(entry_script)
+            
+            if os.name == 'nt':  # Windows使用双引号
+                return f'"{python_path}" "{script_path}"'
+            else:  # Linux不需要引号
+                return f'{python_path} {script_path}'
+
+    @staticmethod
+    def replace_signs(string):
+        ret = (string.
+               replace(":", "_").
+               replace(" ", "_").
+               replace("-", "_").
+               replace(",", "_"))
+        return ret
+
+    @staticmethod
+    def hour_min_str_add_seconds(time_str: str, add_seconds: int):
+        try:
+            parts = time_str.split(":")
+            if len(parts) != 2:
+                Log.error("时间格式错误，需用冒号 ':' 分隔")
+                return None
+            hour = parts[0].zfill(2)
+            minute = parts[1].zfill(2)
+            time_str = f"{hour}:{minute}"
+
+            time = datetime.strptime(time_str, "%H:%M")
+            delta = timedelta(seconds=add_seconds)
+            new_time = time + delta
+            return new_time.strftime("%H:%M")
+        except ValueError as e:
+            Log.error(f"时间格式错误！请输入 'HH:MM' 或 'H:M' 格式，错误原因：{str(e)}")
+            return None
+
+    @staticmethod
+    def download_edge_web_driver():
+        try:
+            if os.path.exists(AppPath.DriversRoot):
+                os.makedirs(AppPath.DriversRoot,exist_ok=True)
+
+            driver_cache = DriverCacheManager(
+                root_dir=AppPath.DriversRoot
+            )
+
+            Log.info("Start to download Edge Web Driver...")
+            driver_path = EdgeChromiumDriverManager(
+                url="https://msedgedriver.microsoft.com/",
+                latest_release_url="https://msedgedriver.microsoft.com/LATEST_RELEASE",
+                cache_manager=driver_cache
+            ).install()
+
+            if not driver_path or not os.path.exists(driver_path):
+                raise Exception("Driver path is invalid after download.")
+
+            Log.info(f'DownLoad driver success, path: {driver_path}')
+        except Exception as e:
+            Log.error(f'DownLoad driver failed: {e}')
+            return False, str(e)
+
+        return True, driver_path
 
 class QtUI:
     @staticmethod

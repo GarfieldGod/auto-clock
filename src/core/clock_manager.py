@@ -1,11 +1,8 @@
 import os
 import json
-import sys
-
-from numpy.ma.core import inner
 
 from src.utils.log import Log
-# from test.test import run_test
+from src.utils.utils import Utils
 from src.utils.const import Key, AppPath, WebPath
 from src.core.auto_clock import AutoClock, Config
 
@@ -19,20 +16,14 @@ class ClockManager:
 
             with open(f"{AppPath.DataJson}", "r", encoding="utf-8") as f:
                 data = json.load(f)
-                inner_driver_path = get_driver_path()
-                if inner_driver_path:
-                    data[Key.DriverPath] = inner_driver_path
-                ok = ClockManager.check_data(data)
-                if not ok:
+
+                check_ret = ClockManager.check_data(data)
+                if not check_ret:
                     raise Exception("Check data error.")
+
                 self.user_name = data[Key.UserName]
                 self.user_password = data[Key.UserPassword]
                 self.driver_path = data[Key.DriverPath]
-                if self.driver_path is None:
-                    self.driver_path = get_driver_path()
-                if self.driver_path is None:
-                    Log.error("Driver Path Error")
-                    raise Exception("No driver path")
 
                 self.always_retry = data.get(Key.AlwaysRetry, False)
                 self.captcha_retry_times = int(data.get(Key.CaptchaRetryTimes, 5))
@@ -101,18 +92,3 @@ def run_clock(is_test=False):
             return True, None
     except Exception as e:
         return False, str(e)
-
-def get_driver_path(driver_name="Edge_Driver\\msedgedriver.exe"):
-    if hasattr(sys, "_MEIPASS"):
-        Log.info("Release mode")
-        driver_dir = os.path.join(sys._MEIPASS, "drivers")
-    else:
-        Log.info("Debug mode")
-        return None
-
-    driver_path = os.path.join(driver_dir, driver_name)
-
-    if not os.path.exists(driver_path):
-        raise FileNotFoundError(f"驱动文件不存在：{driver_path}")
-
-    return driver_path

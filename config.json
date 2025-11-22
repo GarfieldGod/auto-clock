@@ -1,6 +1,6 @@
 [
   {
-    "app": "auto-clock",
+    "app": "auto_clock",
     "version": "1.0.5",
     "description": "A software for auto clock.",
     "project": "https://github.com/GarfieldGod/auto-clock"
